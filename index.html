@@ -17616,6 +17616,11 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
 
 <!-- ===== QUINZENA ===== -->
 <div class="content" id="tab-quinzena">
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <button id="qzSubBtnGeral" class="filter-btn" onclick="qzShowSub('geral')" style="background:var(--accent2);color:#fff;border:none;">📊 Visão Geral</button>
+    <button id="qzSubBtnCliente" class="filter-btn" onclick="qzShowSub('cliente')">🔍 Dia de Pagamento por Cliente</button>
+  </div>
+  <div id="qz-sub-geral">
   <div class="kpi-grid" id="qz-kpi-grid">
     <div class="kpi" style="--accent:var(--accent)"><div class="kpi-label">Padrão 1ª Quinzena</div><div class="kpi-value" id="qz-q1pad">425</div><div class="kpi-sub">Compram dias 1–15</div></div>
     <div class="kpi" style="--accent:var(--accent2)"><div class="kpi-label">Padrão 2ª Quinzena</div><div class="kpi-value" id="qz-q2pad">390</div><div class="kpi-sub">Compram dias 16–31</div></div>
@@ -17655,6 +17660,51 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
       <p id="qzEmptyMsg" style="text-align:center;color:var(--muted);padding:20px;display:none">Nenhum alerta.</p>
     </div>
   </div>
+  </div><!-- /qz-sub-geral -->
+
+  <div id="qz-sub-cliente" style="display:none;">
+    <div class="filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+      <label>🔍 Buscar:</label>
+      <input class="search-input" id="pdSearch" placeholder="Nome ou CNPJ..." oninput="renderPayday()">
+      <label style="margin-left:8px;">🏢 Empresa:</label>
+      <div class="client-tag-wrap" id="pdTagWrap" onclick="document.getElementById('pdTagInput').focus()">
+        <input class="client-tag-input" id="pdTagInput" placeholder="Adicionar empresa..." autocomplete="off"
+          oninput="onPdTagInput()" onkeydown="onPdTagKey(event)" onfocus="showPdDropdown()" onblur="hidePdDropdown()">
+        <div class="client-dropdown" id="pdDropdown" style="display:none;"></div>
+      </div>
+      <label style="margin-left:8px;">🏷️ Segmento:</label>
+      <select id="pdSeg" onchange="renderPayday()">
+        <option value="all">Todos</option>
+        <option value="Diamante">Diamante</option>
+        <option value="Ouro">Ouro</option>
+        <option value="Prata">Prata</option>
+        <option value="Bronze-P">Bronze-P</option>
+        <option value="Bronze-PP">Bronze-PP</option>
+      </select>
+      <button onclick="resetPayday()" class="filter-btn">Limpar</button>
+      <span class="client-count" id="pdCount"></span>
+    </div>
+    <div class="info-note">ℹ️ <strong>Nota:</strong> Dia médio e valor médio pago por pedido, calculados a partir de <strong>Pedido de Carga Completo</strong> (exclui pedidos "Deposit") + <strong>Pedido Externo</strong> (somente "Sem SK", para não duplicar pedido já contado no Pedido de Carga). Use para validar se uma empresa costuma pagar mais tarde no mês (ex.: sempre perto do dia 29) antes de se preocupar com queda de vendas no meio do mês. Tabela ordenada por dia médio de pagamento, do mais tardio para o mais cedo.</div>
+    <div id="pdDetailCards"></div>
+    <div class="table-card">
+      <div class="table-scroll">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:8px 10px;">Empresa</th>
+              <th style="text-align:center;padding:8px 10px;">Segmento</th>
+              <th style="text-align:center;padding:8px 10px;">Dia Médio Pagamento</th>
+              <th style="text-align:right;padding:8px 10px;">Valor Médio Pago</th>
+              <th style="text-align:center;padding:8px 10px;">Pedidos</th>
+              <th style="text-align:center;padding:8px 10px;">Meses c/ histórico</th>
+            </tr>
+          </thead>
+          <tbody id="pdTbody"></tbody>
+        </table>
+      </div>
+      <p id="pdEmptyMsg" style="text-align:center;color:var(--muted);padding:20px;display:none">Nenhuma empresa encontrada.</p>
+    </div>
+  </div><!-- /qz-sub-cliente -->
 </div>
 <script>
 // ===== QUINZENA LOGIC =====
@@ -17710,6 +17760,187 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
 
   qzFilter('todos');
 })();
+</script>
+
+<script>
+// ===== DIA DE PAGAMENTO POR CLIENTE (sub-aba de Quinzena) =====
+const PAYDAY_DATA={};
+var _pdSelectedEmps = [];
+var _pdDdTimer = null;
+var SEG_LABELS_PD = ['Diamante','Ouro','Prata','Bronze-P','Bronze-PP'];
+var _pdCnpjToSeg = null;
+function pdCnpjToSegMap(){
+  if(_pdCnpjToSeg) return _pdCnpjToSeg;
+  _pdCnpjToSeg = {};
+  try{
+    (_GMVSEG||[]).forEach(function(c){
+      var cnpj=String(c[0]).replace(/\D/g,'');
+      if(cnpj) _pdCnpjToSeg[cnpj]=c[2];
+    });
+  }catch(e){}
+  return _pdCnpjToSeg;
+}
+
+window.qzShowSub = function(which){
+  var geral=document.getElementById('qz-sub-geral'), cliente=document.getElementById('qz-sub-cliente');
+  var bG=document.getElementById('qzSubBtnGeral'), bC=document.getElementById('qzSubBtnCliente');
+  if(!geral||!cliente) return;
+  var showCliente = which==='cliente';
+  geral.style.display = showCliente ? 'none' : '';
+  cliente.style.display = showCliente ? '' : 'none';
+  [bG,bC].forEach(function(b){ if(b){ b.style.background='var(--card)'; b.style.color='var(--text)'; b.style.border='1px solid var(--border)'; } });
+  var active = showCliente ? bC : bG;
+  if(active){ active.style.background='var(--accent2)'; active.style.color='#fff'; active.style.border='none'; }
+  if(showCliente) renderPayday();
+};
+
+function fmtPdMoney(v){
+  if(!v) return 'R$ 0';
+  return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function onPdTagInput(){ showPdDropdown(); }
+function hidePdDropdown(){ _pdDdTimer=setTimeout(function(){ var dd=document.getElementById('pdDropdown'); if(dd) dd.style.display='none'; },200); }
+function showPdDropdown(){
+  if(_pdDdTimer){ clearTimeout(_pdDdTimer); _pdDdTimer=null; }
+  var qRaw=(document.getElementById('pdTagInput')||{value:''}).value.trim();
+  var q=qRaw.toLowerCase(), qDigits=qRaw.replace(/\D/g,'');
+  var dd=document.getElementById('pdDropdown'); if(!dd) return;
+  var data = (typeof PAYDAY_DATA!=='undefined') ? PAYDAY_DATA : {};
+  var emps=Object.keys(data).map(function(cnpj){ return {cnpj:cnpj,name:data[cnpj].nome}; })
+    .filter(function(o){
+      if(_pdSelectedEmps.some(function(s){return s.cnpj===o.cnpj;})) return false;
+      if(!q) return true;
+      if(o.name.toLowerCase().indexOf(q)!==-1) return true;
+      if(qDigits && o.cnpj.indexOf(qDigits)!==-1) return true;
+      return false;
+    }).sort(function(a,b){return a.name.localeCompare(b.name);}).slice(0,30);
+  if(!emps.length){ dd.style.display='none'; return; }
+  dd.innerHTML='';
+  emps.forEach(function(o){
+    var item=document.createElement('div'); item.className='client-dropdown-item';
+    var nm=document.createElement('span'); nm.className='dd-name'; nm.textContent=o.name;
+    item.appendChild(nm);
+    var cn=document.createElement('span'); cn.className='dd-cnpj'; cn.textContent=o.cnpj;
+    item.appendChild(cn);
+    (function(cnpj,name){ item.addEventListener('mousedown',function(ev){ ev.preventDefault(); addPdTag(cnpj,name); }); })(o.cnpj,o.name);
+    dd.appendChild(item);
+  });
+  dd.style.display='block';
+}
+function addPdTag(cnpj,name){
+  if(!_pdSelectedEmps.some(function(s){return s.cnpj===cnpj;})) _pdSelectedEmps.push({cnpj:cnpj,name:name});
+  document.getElementById('pdTagInput').value='';
+  var dd=document.getElementById('pdDropdown'); if(dd) dd.style.display='none';
+  renderPdTags();
+}
+function renderPdTags(){
+  var wrap=document.getElementById('pdTagWrap'); if(!wrap) return;
+  wrap.querySelectorAll('.client-tag').forEach(function(t){t.remove();});
+  var inp=document.getElementById('pdTagInput');
+  _pdSelectedEmps.forEach(function(e){
+    var tag=document.createElement('span'); tag.className='client-tag';
+    var nm=e.name.length>22?e.name.slice(0,21)+'…':e.name;
+    tag.appendChild(document.createTextNode(nm+' '));
+    var btn=document.createElement('span'); btn.className='tag-remove'; btn.textContent='×';
+    (function(cnpj){ btn.addEventListener('mousedown',function(ev){ ev.preventDefault(); _pdSelectedEmps=_pdSelectedEmps.filter(function(x){return x.cnpj!==cnpj;}); renderPdTags(); }); })(e.cnpj);
+    tag.appendChild(btn);
+    wrap.insertBefore(tag,inp);
+  });
+  renderPayday();
+}
+function onPdTagKey(e){
+  if(e.key==='Backspace' && !e.target.value && _pdSelectedEmps.length){ _pdSelectedEmps.pop(); renderPdTags(); }
+  if(e.key==='Escape'){ var dd=document.getElementById('pdDropdown'); if(dd) dd.style.display='none'; }
+}
+function resetPayday(){
+  _pdSelectedEmps=[];
+  renderPdTags();
+  var s=document.getElementById('pdSeg'); if(s) s.value='all';
+  var se=document.getElementById('pdSearch'); if(se) se.value='';
+  renderPayday();
+}
+
+function renderPdDetailCards(){
+  var wrap=document.getElementById('pdDetailCards'); if(!wrap) return;
+  var data=(typeof PAYDAY_DATA!=='undefined')?PAYDAY_DATA:{};
+  if(!_pdSelectedEmps.length){ wrap.innerHTML=''; return; }
+  var segMap=pdCnpjToSegMap();
+  var html='';
+  _pdSelectedEmps.forEach(function(sel){
+    var c=data[sel.cnpj]; if(!c) return;
+    var segId=segMap[sel.cnpj]; var segLabel=(segId!=null && segId>=0 && segId<=4)?SEG_LABELS_PD[segId]:null;
+    var segClass=segLabel?segLabel.toLowerCase():'';
+    var mIdxs=Object.keys(c.m||{}).map(Number).sort(function(a,b){return a-b;});
+    var rows=mIdxs.map(function(mi){
+      var md=c.m[mi];
+      return '<tr><td style="padding:6px 8px;">'+(months[mi]||mi)+'</td>'+
+        '<td style="text-align:center;padding:6px 8px;">dia '+md[0]+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;">'+fmtPdMoney(md[1])+'</td>'+
+        '<td style="text-align:center;padding:6px 8px;">'+md[2]+'</td></tr>';
+    }).join('');
+    html+='<div class="chart-card" style="margin-bottom:16px;">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'+
+        '<h3 style="margin:0;">'+c.nome+'</h3>'+
+        (segLabel?'<span class="pill '+segClass+'">'+segLabel+'</span>':'')+
+      '</div>'+
+      '<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">'+
+        '<div class="kpi"><div class="kpi-label">Dia médio de pagamento</div><div class="kpi-value">dia '+c.avgDay+'</div><div class="kpi-sub">'+c.n+' pedidos analisados</div></div>'+
+        '<div class="kpi"><div class="kpi-label">Valor médio pago</div><div class="kpi-value" style="font-size:1.4rem">'+fmtPdMoney(c.avgVal)+'</div><div class="kpi-sub">por pedido</div></div>'+
+        '<div class="kpi"><div class="kpi-label">Meses com histórico</div><div class="kpi-value">'+mIdxs.length+'</div><div class="kpi-sub">de '+months.length+' meses</div></div>'+
+      '</div>'+
+      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+        '<thead><tr style="border-bottom:1px solid var(--border)">'+
+          '<th style="text-align:left;padding:6px 8px;color:var(--muted)">Mês</th>'+
+          '<th style="text-align:center;padding:6px 8px;color:var(--muted)">Dia Pago (média)</th>'+
+          '<th style="text-align:right;padding:6px 8px;color:var(--muted)">Valor Pago (média)</th>'+
+          '<th style="text-align:center;padding:6px 8px;color:var(--muted)">Pedidos</th>'+
+        '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '</div>';
+  });
+  wrap.innerHTML=html;
+}
+
+function renderPayday(){
+  renderPdDetailCards();
+  var tbody=document.getElementById('pdTbody'), empty=document.getElementById('pdEmptyMsg'), countEl=document.getElementById('pdCount');
+  if(!tbody) return;
+  var data=(typeof PAYDAY_DATA!=='undefined')?PAYDAY_DATA:{};
+  var segFilter=(document.getElementById('pdSeg')||{value:'all'}).value;
+  var searchRaw=(document.getElementById('pdSearch')||{value:''}).value.trim().toLowerCase();
+  var searchDigits=searchRaw.replace(/\D/g,'');
+  var segMap=pdCnpjToSegMap();
+  var tagCnpjs=_pdSelectedEmps.map(function(s){return s.cnpj;});
+  var rows=Object.keys(data).map(function(cnpj){
+    var c=data[cnpj];
+    var segId=segMap[cnpj];
+    var segLabel=(segId!=null && segId>=0 && segId<=4)?SEG_LABELS_PD[segId]:'—';
+    return {cnpj:cnpj,nome:c.nome,segId:segId,segLabel:segLabel,avgDay:c.avgDay,avgVal:c.avgVal,n:c.n,nMonths:Object.keys(c.m||{}).length};
+  }).filter(function(r){
+    if(tagCnpjs.length && tagCnpjs.indexOf(r.cnpj)===-1) return false;
+    if(segFilter!=='all' && r.segLabel!==segFilter) return false;
+    if(searchRaw){
+      var nameMatch=r.nome.toLowerCase().indexOf(searchRaw)!==-1;
+      var cnpjMatch=searchDigits && r.cnpj.indexOf(searchDigits)!==-1;
+      if(!nameMatch && !cnpjMatch) return false;
+    }
+    return true;
+  }).sort(function(a,b){ return b.avgDay-a.avgDay; });
+
+  if(countEl) countEl.textContent=rows.length+' empresa(s)';
+  if(!rows.length){ tbody.innerHTML=''; if(empty) empty.style.display='block'; return; }
+  if(empty) empty.style.display='none';
+  var segClassMap={'Diamante':'diamante','Ouro':'ouro','Prata':'prata','Bronze-P':'bronze-p','Bronze-PP':'bronze-pp'};
+  tbody.innerHTML=rows.map(function(r){
+    var segClass=segClassMap[r.segLabel]||'';
+    return '<tr><td style="padding:7px 10px;">'+r.nome+'</td>'+
+      '<td style="text-align:center;padding:7px 10px;">'+(segClass?'<span class="pill '+segClass+'">'+r.segLabel+'</span>':r.segLabel)+'</td>'+
+      '<td style="text-align:center;padding:7px 10px;">dia '+r.avgDay+'</td>'+
+      '<td style="text-align:right;padding:7px 10px;">'+fmtPdMoney(r.avgVal)+'</td>'+
+      '<td style="text-align:center;padding:7px 10px;">'+r.n+'</td>'+
+      '<td style="text-align:center;padding:7px 10px;">'+r.nMonths+'</td></tr>';
+  }).join('');
+}
 </script>
 
 <!-- ===== GMV POR ESTADO ===== -->
