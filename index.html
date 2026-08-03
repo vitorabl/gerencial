@@ -6168,10 +6168,13 @@ function initSumTab(){
   var selA=document.getElementById('sumMesA');
   var selB=document.getElementById('sumMesB');
   if(!selA||!selB||typeof months==='undefined') return;
-  // Escopo fixo: apenas Jan/26 a Jun/26 (ultimos 6 meses do 1o semestre, a pedido)
-  var _rangeStart=months.indexOf('Jan/26'), _rangeEnd=months.indexOf('Jun/26');
+  // Inicio do intervalo fixo em Jan/26 (escopo pedido anteriormente); fim do intervalo
+  // agora vai até o ultimo mes disponivel (antes ficava travado em 'Jun/26' — o _RD que
+  // alimenta a tabela de grupos era um array estatico que nunca passou de Jun/26; agora
+  // o update_vars.py gera o _RD todo dia, entao a aba Resumo pode usar todos os meses).
+  // Corrigido em 03/Ago/2026 a pedido do usuario ("atualizar sempre todas as abas").
+  var _rangeStart=months.indexOf('Jan/26'), _rangeEnd=months.length-1;
   if(_rangeStart<0) _rangeStart=0;
-  if(_rangeEnd<0) _rangeEnd=months.length-1;
   for(var mi=_rangeStart; mi<=_rangeEnd; mi++){ selA.add(new Option(months[mi],mi)); selB.add(new Option(months[mi],mi)); }
   var lastIdx=_rangeStart;
   for(var k=_rangeEnd;k>=_rangeStart;k--){ if((gmvVT[k]||0)+(gmvPAT[k]||0)>0){lastIdx=k;break;} }
