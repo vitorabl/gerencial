@@ -438,7 +438,181 @@ function togglePwd(){
     <div class="chart-card"><h3>Detalhes de Inatividade</h3><div style="margin-top:14px;"><div style="display:flex;flex-direction:column;gap:12px;" id="inactiveTable"></div></div></div>
     <div class="chart-card"><h3>Segmentação — Composição</h3><p class="chart-sub">Share atual da base por segmento</p><div class="chart-wrap"><canvas id="segPieChart"></canvas></div></div>
   </div>
+
+  <div class="table-card" id="riskAlertCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+      <h3 style="margin:0;">⚠️ Alerta de Clientes em Risco</h3>
+      <span class="client-count" id="riskCount"></span>
+    </div>
+    <div class="info-note">ℹ️ <strong>Nota:</strong> calculado pela data real da última compra (Pedido de Carga + Pedido Externo, qualquer tipo de pedido) — não pelo mês do calendário, para não distorcer quando o mês corrente ainda está começando. Recalculado a cada abertura da página com base na data de hoje.</div>
+    <div class="filter-bar" style="flex-wrap:wrap;gap:10px;margin:10px 0;">
+      <label>🔍 Buscar:</label>
+      <input class="search-input" id="riskSearch" placeholder="Nome ou CNPJ..." oninput="renderRiskAlert()">
+      <label style="margin-left:8px;">🏷️ Segmento:</label>
+      <select id="riskSeg" onchange="renderRiskAlert()">
+        <option value="all">Todos</option>
+        <option value="Diamante">Diamante</option>
+        <option value="Ouro">Ouro</option>
+        <option value="Prata">Prata</option>
+        <option value="Bronze-P">Bronze-P</option>
+        <option value="Bronze-PP">Bronze-PP</option>
+      </select>
+      <span style="width:1px;height:22px;background:var(--border);"></span>
+      <button id="riskBtnAlerta" class="filter-btn" onclick="riskSetFilter('alerta')" style="background:var(--accent2);color:#fff;border:none;">⚠️ Risco + Inativos</button>
+      <button id="riskBtnRisco" class="filter-btn" onclick="riskSetFilter('risco')">🟡 Só Risco (30–89d)</button>
+      <button id="riskBtnInativo" class="filter-btn" onclick="riskSetFilter('inativo')">🔴 Só Inativos (90d+)</button>
+      <button id="riskBtnTodos" class="filter-btn" onclick="riskSetFilter('todos')">Todos</button>
+      <button onclick="resetRiskAlert()" class="filter-btn">Limpar</button>
+      <button class="uf-export-btn" id="riskBtnExcel" onclick="exportarExcelRisk()" style="margin-left:auto;">⬇️ Exportar Excel</button>
+    </div>
+    <div class="table-scroll">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:8px 10px;">Empresa</th>
+            <th style="text-align:center;padding:8px 10px;">Segmento</th>
+            <th style="text-align:center;padding:8px 10px;">Última Compra</th>
+            <th style="text-align:center;padding:8px 10px;">Dias sem Comprar</th>
+            <th style="text-align:center;padding:8px 10px;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="riskTbody"></tbody>
+      </table>
+      <p id="riskEmptyMsg" style="text-align:center;color:var(--muted);padding:20px;display:none">Nenhum cliente encontrado.</p>
+    </div>
+  </div>
 </div>
+
+<script>
+// ===== ALERTA DE CLIENTES EM RISCO (aba Clientes) — dias reais desde a
+// ultima compra (RISK_DATA), independente do mes do calendario. Adicionado
+// em 03/Ago/2026 a pedido do usuario. =====
+(function(){
+  var _riskFilter = 'alerta';
+  var _riskCnpjToSeg = null;
+  var SEG_LABELS_RISK = ['Diamante','Ouro','Prata','Bronze-P','Bronze-PP'];
+
+  function riskCnpjToSegMap(){
+    if(_riskCnpjToSeg) return _riskCnpjToSeg;
+    _riskCnpjToSeg = {};
+    try{
+      (_GMVSEG||[]).forEach(function(c){
+        var cnpj=String(c[0]).replace(/\D/g,'');
+        if(cnpj) _riskCnpjToSeg[cnpj]=c[2];
+      });
+    }catch(e){}
+    return _riskCnpjToSeg;
+  }
+
+  function riskDiasSemComprar(lastStr){
+    var last=new Date(lastStr+'T00:00:00');
+    var hoje=new Date(); hoje.setHours(0,0,0,0);
+    return Math.floor((hoje-last)/86400000);
+  }
+  function riskStatus(dias){
+    if(dias>=90) return 'inativo';
+    if(dias>=30) return 'risco';
+    return 'ativo';
+  }
+  function fmtRiskDate(iso){
+    var p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0];
+  }
+
+  function riskRowsData(){
+    var data=(typeof RISK_DATA!=='undefined')?RISK_DATA:{};
+    var segFilter=(document.getElementById('riskSeg')||{value:'all'}).value;
+    var searchRaw=(document.getElementById('riskSearch')||{value:''}).value.trim().toLowerCase();
+    var searchDigits=searchRaw.replace(/\D/g,'');
+    var segMap=riskCnpjToSegMap();
+    return Object.keys(data).map(function(cnpj){
+      var c=data[cnpj];
+      var dias=riskDiasSemComprar(c.last);
+      var status=riskStatus(dias);
+      var segId=segMap[cnpj];
+      var segLabel=(segId!=null && segId>=0 && segId<=4)?SEG_LABELS_RISK[segId]:'—';
+      return {cnpj:cnpj,nome:c.nome,last:c.last,dias:dias,status:status,segLabel:segLabel};
+    }).filter(function(r){
+      if(_riskFilter==='risco' && r.status!=='risco') return false;
+      if(_riskFilter==='inativo' && r.status!=='inativo') return false;
+      if(_riskFilter==='alerta' && r.status==='ativo') return false;
+      if(segFilter!=='all' && r.segLabel!==segFilter) return false;
+      if(searchRaw){
+        var nameMatch=r.nome.toLowerCase().indexOf(searchRaw)!==-1;
+        var cnpjMatch=searchDigits && r.cnpj.indexOf(searchDigits)!==-1;
+        if(!nameMatch && !cnpjMatch) return false;
+      }
+      return true;
+    }).sort(function(a,b){ return b.dias-a.dias; });
+  }
+
+  window.riskSetFilter=function(f){
+    _riskFilter=f;
+    ['Alerta','Risco','Inativo','Todos'].forEach(function(k){
+      var b=document.getElementById('riskBtn'+k); if(!b) return;
+      var active=(f===k.toLowerCase());
+      b.style.background=active?'var(--accent2)':'var(--card)';
+      b.style.color=active?'#fff':'var(--text)';
+      b.style.border=active?'none':'1px solid var(--border)';
+    });
+    renderRiskAlert();
+  };
+
+  window.resetRiskAlert=function(){
+    var se=document.getElementById('riskSearch'); if(se) se.value='';
+    var s=document.getElementById('riskSeg'); if(s) s.value='all';
+    riskSetFilter('alerta');
+  };
+
+  window.renderRiskAlert=function(){
+    var tbody=document.getElementById('riskTbody'), empty=document.getElementById('riskEmptyMsg'), countEl=document.getElementById('riskCount');
+    if(!tbody) return;
+    var rows=riskRowsData();
+    if(countEl){
+      var riscoN=rows.filter(function(r){return r.status==='risco';}).length;
+      var inatN=rows.filter(function(r){return r.status==='inativo';}).length;
+      countEl.textContent=rows.length+' cliente(s)'+(riscoN?' · '+riscoN+' em risco':'')+(inatN?' · '+inatN+' inativos':'');
+    }
+    if(!rows.length){ tbody.innerHTML=''; if(empty) empty.style.display='block'; return; }
+    if(empty) empty.style.display='none';
+    var segClassMap={'Diamante':'diamante','Ouro':'ouro','Prata':'prata','Bronze-P':'bronze-p','Bronze-PP':'bronze-pp'};
+    tbody.innerHTML=rows.map(function(r){
+      var segClass=segClassMap[r.segLabel]||'';
+      var statusHtml = r.status==='inativo' ? '<span class="pill inativo">Inativo +90d</span>'
+        : (r.status==='risco' ? '<span class="pill risco">Em risco</span>' : '<span class="pill ativo">Ativo</span>');
+      return '<tr><td style="padding:7px 10px;">'+r.nome+'</td>'+
+        '<td style="text-align:center;padding:7px 10px;">'+(segClass?'<span class="pill '+segClass+'">'+r.segLabel+'</span>':r.segLabel)+'</td>'+
+        '<td style="text-align:center;padding:7px 10px;">'+fmtRiskDate(r.last)+'</td>'+
+        '<td style="text-align:center;padding:7px 10px;font-weight:600;">'+r.dias+' dias</td>'+
+        '<td style="text-align:center;padding:7px 10px;">'+statusHtml+'</td></tr>';
+    }).join('');
+  };
+
+  window.exportarExcelRisk=function(){
+    var btn=document.getElementById('riskBtnExcel');
+    var originalLabel=btn?btn.textContent:'';
+    try{
+      if(typeof XLSX==='undefined'){ alert('A biblioteca de exportação para Excel ainda não carregou. Aguarde alguns segundos e tente novamente.'); return; }
+      if(btn){ btn.disabled=true; btn.textContent='⏳ Gerando...'; }
+      var rows=riskRowsData();
+      var header=['Empresa','CNPJ','Segmento','Última Compra','Dias sem Comprar','Status'];
+      var aoa=[header];
+      rows.forEach(function(r){
+        aoa.push([r.nome, r.cnpj, r.segLabel, r.last, r.dias, r.status==='inativo'?'Inativo':(r.status==='risco'?'Em risco':'Ativo')]);
+      });
+      var wb=XLSX.utils.book_new();
+      var ws=XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols']=[{wch:32},{wch:18},{wch:12},{wch:14},{wch:14},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Alerta Risco');
+      XLSX.writeFile(wb, 'Alerta_Clientes_Risco_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    } catch(e){
+      console.error(e);
+      alert('Erro ao gerar o Excel: '+e.message);
+    } finally {
+      if(btn){ btn.disabled=false; btn.textContent=originalLabel||'⬇️ Exportar Excel'; }
+    }
+  };
+})();
+</script>
 
 <!-- ===== COMISSÕES ===== -->
 <div class="content" id="tab-comissoes">
@@ -17724,6 +17898,9 @@ window.showTab=function(name,e){
     // Garante que a tabela de GMV por segmento seja preenchida mesmo se a
     // primeira chamada de applyGmv() tiver ocorrido antes do _CD carregar.
     renderGmvSeg();
+  }
+  if(name==='clientes' && typeof renderRiskAlert==='function'){
+    renderRiskAlert();
   }
 };
 // Inicializar ao carregar a página (para o seletor ficar pronto)
