@@ -17785,6 +17785,10 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
 
   <div id="qz-sub-cliente" style="display:none;">
     <div class="filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+      <label>📅 Mês de referência:</label>
+      <select id="pdMonthSel" onchange="pdSetMonth(this.value)"></select>
+      <button id="pdMonthAuto" class="filter-btn" onclick="pdResetMonth()" title="Voltar para o último mês com dados" style="font-size:11px;padding:4px 10px;">🔄 Automático</button>
+      <span style="width:1px;height:22px;background:var(--border);"></span>
       <label>🔍 Buscar:</label>
       <input class="search-input" id="pdSearch" placeholder="Nome ou CNPJ..." oninput="renderPayday()">
       <label style="margin-left:8px;">🏢 Empresa:</label>
@@ -17820,8 +17824,8 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
               <th style="text-align:left;padding:8px 10px;">Empresa</th>
               <th style="text-align:center;padding:8px 10px;">Segmento</th>
               <th style="text-align:center;padding:8px 10px;">Dia Médio Pagamento</th>
-              <th style="text-align:right;padding:8px 10px;">Faturamento Mês Anterior</th>
-              <th style="text-align:right;padding:8px 10px;">Faturamento Último Mês</th>
+              <th style="text-align:right;padding:8px 10px;" id="pdThAnt">Faturamento Mês Anterior</th>
+              <th style="text-align:right;padding:8px 10px;" id="pdThCur">Faturamento Último Mês</th>
               <th style="text-align:right;padding:8px 10px;">Var. vs Último Mês</th>
               <th style="text-align:center;padding:8px 10px;">Pedidos</th>
               <th style="text-align:center;padding:8px 10px;">Meses c/ histórico</th>
@@ -17909,7 +17913,43 @@ const PAYDAY_DATA={"00152150000110":{"nome":"COMERCIAL MEDEIROS LELIS ME","avgDa
 var _pdCurIdx = (typeof qtdAtivos!=='undefined' && qtdAtivos.length) ? qtdAtivos.length-1
   : ((typeof clientCutIdx!=='undefined') ? clientCutIdx-1 : (typeof months!=='undefined'?months.length-1:0));
 var _pdLastIdx = Math.max(0, _pdCurIdx-1);
+var _pdDefaultCurIdx = _pdCurIdx; // valor automático original (último mês com dados) — usado pelo botão "Automático"
 var _pdTrendFilter = 'todos';
+
+// ===== Filtro de mês de referência (permite comparar qualquer mês já fechado,
+// em vez de depender só do "último mês com dados" calculado pelo pipeline —
+// esse cálculo pode achar "fechado" um mês que só começou a receber pedidos
+// há poucos dias). Implementado em 03/Ago/2026 a pedido do usuário. =====
+function pdAvailableMonthIdxs(){
+  var data=(typeof PAYDAY_DATA!=='undefined')?PAYDAY_DATA:{};
+  var set={};
+  Object.keys(data).forEach(function(cnpj){
+    var m=data[cnpj].m||{};
+    Object.keys(m).forEach(function(mi){ set[mi]=true; });
+  });
+  return Object.keys(set).map(Number).sort(function(a,b){return a-b;});
+}
+function initPdMonthSel(){
+  var sel=document.getElementById('pdMonthSel'); if(!sel) return;
+  if(!sel.options.length){
+    var idxs=pdAvailableMonthIdxs();
+    sel.innerHTML=idxs.map(function(mi){ return '<option value="'+mi+'">'+(months[mi]||mi)+'</option>'; }).join('');
+  }
+  sel.value=String(_pdCurIdx);
+}
+window.pdSetMonth=function(val){
+  var mi=parseInt(val,10);
+  if(isNaN(mi)) return;
+  _pdCurIdx=mi;
+  _pdLastIdx=Math.max(0,_pdCurIdx-1);
+  renderPayday();
+};
+window.pdResetMonth=function(){
+  _pdCurIdx=_pdDefaultCurIdx;
+  _pdLastIdx=Math.max(0,_pdCurIdx-1);
+  var sel=document.getElementById('pdMonthSel'); if(sel) sel.value=String(_pdCurIdx);
+  renderPayday();
+};
 function pdMonthTotal(c, mi){ return (c && c.m && c.m[mi]) ? c.m[mi][1] : 0; }
 var _pdSelectedEmps = [];
 var _pdDdTimer = null;
@@ -17937,7 +17977,7 @@ window.qzShowSub = function(which){
   [bG,bC].forEach(function(b){ if(b){ b.style.background='var(--card)'; b.style.color='var(--text)'; b.style.border='1px solid var(--border)'; } });
   var active = showCliente ? bC : bG;
   if(active){ active.style.background='var(--accent2)'; active.style.color='#fff'; active.style.border='none'; }
-  if(showCliente) renderPayday();
+  if(showCliente){ initPdMonthSel(); renderPayday(); }
 };
 
 function fmtPdMoney(v){
@@ -18018,6 +18058,7 @@ function resetPayday(){
   var s=document.getElementById('pdSeg'); if(s) s.value='all';
   var se=document.getElementById('pdSearch'); if(se) se.value='';
   pdSetTrend('todos');
+  pdResetMonth();
 }
 
 function pdRowsData(){
@@ -18066,7 +18107,7 @@ function renderPdDetailCards(){
     var mIdxs=Object.keys(c.m||{}).map(Number).sort(function(a,b){return a-b;});
     var rows=mIdxs.map(function(mi){
       var md=c.m[mi];
-      var tag = mi===_pdCurIdx ? ' <span class="pill ativo" style="font-size:9px;">mês atual</span>' : (mi===_pdLastIdx ? ' <span class="pill" style="font-size:9px;background:rgba(96,165,250,.18);color:#60a5fa;">último completo</span>' : '');
+      var tag = mi===_pdCurIdx ? ' <span class="pill ativo" style="font-size:9px;">mês selecionado</span>' : (mi===_pdLastIdx ? ' <span class="pill" style="font-size:9px;background:rgba(96,165,250,.18);color:#60a5fa;">mês de comparação</span>' : '');
       return '<tr><td style="padding:6px 8px;">'+(months[mi]||mi)+tag+'</td>'+
         '<td style="text-align:center;padding:6px 8px;">dia '+md[0]+'</td>'+
         '<td style="text-align:right;padding:6px 8px;">'+fmtPdMoney(md[1])+'</td>'+
@@ -18082,8 +18123,8 @@ function renderPdDetailCards(){
       '</div>'+
       '<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px;">'+
         '<div class="kpi"><div class="kpi-label">Dia médio de pagamento</div><div class="kpi-value">dia '+c.avgDay+'</div><div class="kpi-sub">'+c.n+' pedidos analisados</div></div>'+
-        '<div class="kpi"><div class="kpi-label">Faturamento Mês Anterior</div><div class="kpi-value" style="font-size:1.3rem">'+fmtPdMoney(lastVal)+'</div><div class="kpi-sub">'+(months[_pdLastIdx]||'—')+' (mês fechado)</div></div>'+
-        '<div class="kpi"><div class="kpi-label">Faturamento Último Mês</div><div class="kpi-value" style="font-size:1.3rem;color:'+curColorDetail+'">'+fmtPdMoney(curVal)+'</div><div class="kpi-sub">'+(months[_pdCurIdx]||'—')+' (mês fechado)</div></div>'+
+        '<div class="kpi"><div class="kpi-label">Faturamento Mês Anterior</div><div class="kpi-value" style="font-size:1.3rem">'+fmtPdMoney(lastVal)+'</div><div class="kpi-sub">'+(months[_pdLastIdx]||'—')+' (comparação)</div></div>'+
+        '<div class="kpi"><div class="kpi-label">Faturamento Último Mês</div><div class="kpi-value" style="font-size:1.3rem;color:'+curColorDetail+'">'+fmtPdMoney(curVal)+'</div><div class="kpi-sub">'+(months[_pdCurIdx]||'—')+' (selecionado)</div></div>'+
         '<div class="kpi"><div class="kpi-label">Meses com histórico</div><div class="kpi-value">'+mIdxs.length+'</div><div class="kpi-sub">de '+months.length+' meses</div></div>'+
       '</div>'+
       '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'+
@@ -18100,6 +18141,8 @@ function renderPdDetailCards(){
 
 function renderPayday(){
   renderPdDetailCards();
+  var thAnt=document.getElementById('pdThAnt'); if(thAnt) thAnt.textContent='Faturamento '+(months[_pdLastIdx]||'Mês Anterior');
+  var thCur=document.getElementById('pdThCur'); if(thCur) thCur.textContent='Faturamento '+(months[_pdCurIdx]||'Último Mês');
   var tbody=document.getElementById('pdTbody'), empty=document.getElementById('pdEmptyMsg'), countEl=document.getElementById('pdCount');
   if(!tbody) return;
   var rows = pdRowsData();
