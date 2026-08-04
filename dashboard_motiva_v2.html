@@ -732,6 +732,18 @@ function togglePwd(){
     </div>
   </div>
 
+  <!-- ===== Card: Total de Compra por Operadora ===== -->
+  <div class="chart-card" id="ccOpCard" style="padding:16px;position:relative;margin-bottom:16px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;margin-bottom:10px;color:var(--text-muted)">🏭 TOTAL DE COMPRA POR OPERADORA</div>
+    <div id="ccOpTotalWrap" style="cursor:default;display:none;"
+         onmouseenter="showCCOpPopup()" onmouseleave="hideCCOpPopup()">
+      <div class="kpi-value" id="ccOpTotalVal" style="font-size:1.7rem;">—</div>
+      <div class="kpi-sub">GMV total no período — passe o mouse para detalhar por operadora</div>
+      <div id="ccOpPopup" style="display:none;position:absolute;top:64px;left:16px;z-index:60;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;box-shadow:0 8px 30px rgba(0,0,0,.4);min-width:260px;max-width:320px;"></div>
+    </div>
+    <div id="ccOpList" style="display:none;"></div>
+  </div>
+
   <!-- ===== 4 gráficos em 2x2 ===== -->
   <div id="ccChartsSection" style="display:none;margin-bottom:16px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
@@ -17586,6 +17598,86 @@ function renderCCDashboard(allData, yrFilter){
   if(cartEl) cartEl.textContent='Média: '+Math.round(cartAvg).toLocaleString('pt-BR')+'/mês  ·  Acum: '+_ccFmtInt(totCart);
 }
 
+// ===== Card "Total de Compra por Operadora" (aba Controle Cliente) =====
+// Sem filtro de empresa (_ccSelectedEmps vazio): mostra GMV total, com popup no
+// hover detalhando por operadora. Com empresa(s) filtrada(s): mostra a lista de
+// operadoras direto no card (sem popup). Usa o mesmo dataset já filtrado
+// (origem/empresa/grupo/ano/meses) que alimenta os gráficos da aba — ver renderCC().
+function renderCCOperadora(data){
+  var wrap=document.getElementById('ccOpTotalWrap');
+  var list=document.getElementById('ccOpList');
+  var popup=document.getElementById('ccOpPopup');
+  var valEl=document.getElementById('ccOpTotalVal');
+  if(!wrap||!list||!popup||!valEl) return;
+
+  var byOp={};
+  (data||[]).forEach(function(r){
+    var op=r[9]||'Não informado';
+    byOp[op]=(byOp[op]||0)+(r[3]||0);
+  });
+  var opRows=Object.keys(byOp).map(function(k){return {op:k,val:byOp[k]};})
+    .filter(function(o){return o.val!==0;})
+    .sort(function(a,b){return b.val-a.val;});
+  var total=opRows.reduce(function(s,o){return s+o.val;},0);
+  window._ccOpRowsCache=opRows; // usado pelo filtro de busca do popup (filterCCOpPopup)
+
+  var hasCompanyFilter=(typeof _ccSelectedEmps!=='undefined'&&_ccSelectedEmps.length>0);
+
+  if(!opRows.length){
+    wrap.style.display='none';
+    list.style.display='block';
+    list.innerHTML='<div class="kpi-sub" style="padding:8px 0;">Nenhum dado no período/filtro atual.</div>';
+    return;
+  }
+
+  if(hasCompanyFilter){
+    // Empresa(s) filtrada(s): lista direto no card, sem popup
+    wrap.style.display='none';
+    list.style.display='block';
+    list.innerHTML=opRows.map(ccOpLine).join('')+
+      '<div style="display:flex;justify-content:space-between;gap:16px;padding:6px 0 0;font-size:12px;font-weight:700;">'+
+      '<span>Total</span><span>'+fmtCCFull(total)+'</span></div>';
+  } else {
+    // Sem filtro de empresa: total no card, detalhamento (com busca) no popup ao passar o mouse
+    list.style.display='none';
+    wrap.style.display='block';
+    wrap.style.cursor='pointer';
+    valEl.textContent=fmtCCFull(total);
+    popup.innerHTML='<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">POR OPERADORA</div>'+
+      '<input id="ccOpSearch" type="text" placeholder="🔍 Filtrar operadora..." autocomplete="off" '+
+      'oninput="filterCCOpPopup()" onclick="event.stopPropagation()" '+
+      'style="width:100%;box-sizing:border-box;font-size:12px;padding:5px 8px;border-radius:6px;background:var(--bg);color:var(--text);border:1px solid var(--border);margin-bottom:8px;">'+
+      '<div id="ccOpPopupList" style="max-height:220px;overflow-y:auto;">'+opRows.map(ccOpLine).join('')+'</div>';
+  }
+}
+function ccOpLine(o){
+  return '<div style="display:flex;justify-content:space-between;gap:16px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border);">'+
+    '<span style="color:var(--text-muted);">'+o.op+'</span>'+
+    '<span style="font-weight:600;">'+fmtCCFull(o.val)+'</span></div>';
+}
+function filterCCOpPopup(){
+  var input=document.getElementById('ccOpSearch');
+  var listEl=document.getElementById('ccOpPopupList');
+  if(!input||!listEl) return;
+  var q=input.value.trim().toLowerCase();
+  var rows=(window._ccOpRowsCache||[]).filter(function(o){
+    return !q||o.op.toLowerCase().includes(q);
+  });
+  listEl.innerHTML=rows.length?rows.map(ccOpLine).join(''):
+    '<div class="kpi-sub" style="padding:6px 0;">Nenhuma operadora encontrada.</div>';
+}
+function showCCOpPopup(){
+  var wrap=document.getElementById('ccOpTotalWrap');
+  if(wrap&&wrap.style.display==='block'){
+    var popup=document.getElementById('ccOpPopup');
+    if(popup) popup.style.display='block';
+  }
+}
+function hideCCOpPopup(){
+  var popup=document.getElementById('ccOpPopup');
+  if(popup) popup.style.display='none';
+}
+
 function renderCC(){
   if(typeof _CC==='undefined') return;
   var sel=document.getElementById('ccMes');
@@ -17742,6 +17834,7 @@ function renderCC(){
     return true;
   });
   renderCCDashboard(allPeriodData, yrFilter);
+  renderCCOperadora(allPeriodData);
 }
 
 function exportCC(){
