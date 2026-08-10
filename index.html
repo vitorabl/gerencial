@@ -4248,10 +4248,11 @@ function hideClientDropdown(){_ddTimer=setTimeout(function(){var dd=document.get
 function showClientDropdown(){
   if(_ddTimer){clearTimeout(_ddTimer);_ddTimer=null;}
   var q=(document.getElementById('clientTagInput')||{value:''}).value.toLowerCase().trim();
+  var qDigits=q.replace(/\D/g,'');
   var dd=document.getElementById('clientDropdown');if(!dd)return;
   var pool=typeof clientGmvData!=='undefined'?clientGmvData:[];
   var matches=pool.filter(function(c){return!_selectedClients.find(function(s){return s.cnpj===c.cnpj;});})
-    .filter(function(c){return!q||c.empresa.toLowerCase().includes(q)||c.cnpj.includes(q);}).slice(0,30);
+    .filter(function(c){return!q||c.empresa.toLowerCase().includes(q)||c.cnpj.includes(q)||(qDigits&&c.cnpj.replace(/\D/g,'').includes(qDigits));}).slice(0,30);
   if(!q&&matches.length===0){dd.style.display='none';return;}
   dd.innerHTML='';
   if(matches.length===0){
@@ -4275,11 +4276,13 @@ function onClientTagKey(e){
 }
 function renderClientTable(){
   const search=(document.getElementById('clientSearch')?.value||'').toLowerCase();
+  const searchDigits=search.replace(/\D/g,'');
   const seg=document.getElementById('clientSeg')?.value||'all';
   const origem=document.getElementById('clientOrigem')?.value||'all';
 
   let data=clientGmvData.filter(c=>{
-    const matchSearch=!search||c.empresa.toLowerCase().includes(search)||c.cnpj.includes(search);
+    const matchSearch=!search||c.empresa.toLowerCase().includes(search)||c.cnpj.includes(search)||
+      (searchDigits&&c.cnpj.replace(/\D/g,'').includes(searchDigits));
     const matchSeg=seg==='all'||c.segmento===seg;
     const matchOrigem=origem==='all'||c.origem===origem;
     var matchMulti=_selectedClients.length===0||_selectedClients.some(function(s){return s.cnpj===c.cnpj;});
@@ -6222,10 +6225,12 @@ function exportCommCSV(){
 function exportClientCSV(){
   const seg    = document.getElementById('clientSeg')?.value   || 'all';
   const search = (document.getElementById('clientSearch')?.value || '').toLowerCase();
+  const searchDigits = search.replace(/\D/g,'');
   const _SEGS_LOCAL = ['Diamante','Ouro','Prata','Bronze-P','Bronze-PP',''];
   let filtered = _CD.filter(r => {
     if(seg !== 'all' && _SEGS_LOCAL[r[2]] !== seg) return false;
-    if(search && !r[1].toLowerCase().includes(search) && !(r[0]||'').includes(search)) return false;
+    if(search && !r[1].toLowerCase().includes(search) && !(r[0]||'').includes(search) &&
+       !(searchDigits && (r[0]||'').replace(/\D/g,'').includes(searchDigits))) return false;
     return true;
   });
   const bom = '\uFEFF';
