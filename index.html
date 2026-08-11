@@ -6731,6 +6731,8 @@ window.buildSummary=function(){
   var projTot_A=getTotProj(idxA), projTot_B=getTotProj(idxB);
   var gNov_A=(typeof ncliGmvNovos!=='undefined'?ncliGmvNovos[idxA]:0)||0;
   var gNov_B=(typeof ncliGmvNovos!=='undefined'?ncliGmvNovos[idxB]:0)||0;
+  var rNov_A=(typeof ncliRecNovos!=='undefined'?ncliRecNovos[idxA]:0)||0;
+  var rNov_B=(typeof ncliRecNovos!=='undefined'?ncliRecNovos[idxB]:0)||0;
 
   var area=document.getElementById('sum-kpi-area');
   area.innerHTML=
@@ -6745,6 +6747,7 @@ window.buildSummary=function(){
     '<div class="kpi-grid">'+
       kpiCard('Receita VT',rVT_A,rVT_B,mA,mB,fmtM,false)+
       kpiCard('Financiamento',fin_A,fin_B,mA,mB,fmtM,false)+
+      kpiCard('Receita Clientes Novos',rNov_A,rNov_B,mA,mB,fmtM,false)+
       kpiCard('Receita Total',rTot_A,rTot_B,mA,mB,fmtM,false)+
       kpiCard('Take Rate VT',trVT_A,trVT_B,mA,mB,function(v){return v.toFixed(3)+'%';},false,'pp')+
       kpiCard('Take Rate Total',trTot_A,trTot_B,mA,mB,function(v){return v.toFixed(3)+'%';},false,'pp')+
