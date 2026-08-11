@@ -423,6 +423,11 @@ function togglePwd(){
 
 <!-- ===== CLIENTES ===== -->
 <div class="content" id="tab-clientes">
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <button id="cliSubBtnGeral" class="filter-btn" onclick="cliShowSub('geral')" style="background:var(--accent2);color:#fff;border:none;">📊 Visão Geral</button>
+    <button id="cliSubBtnNovos" class="filter-btn" onclick="cliShowSub('novos')">🆕 Clientes Novos</button>
+  </div>
+  <div id="cli-sub-geral">
   <div class="filter-bar">
     <label>📅 Mês de referência:</label>
     <select id="clienteMesSel" onchange="onClienteMesChange()"></select>
@@ -493,7 +498,9 @@ function togglePwd(){
       <p id="riskEmptyMsg" style="text-align:center;color:var(--muted);padding:20px;display:none">Nenhum cliente encontrado.</p>
     </div>
   </div>
+  </div>
 
+  <div id="cli-sub-novos" style="display:none">
   <div class="table-card" id="ncliCard">
     <h3>🆕 Clientes Novos — Incremento por Estreia</h3>
     <div style="padding:14px 18px 0;">
@@ -537,6 +544,7 @@ function togglePwd(){
       </table>
     </div>
     <div class="info-note" style="margin:10px 18px 14px;">ℹ️ Receita = Tx Adm + Tx Sucesso (PCC + Pedido Externo), mesma regra de GMV do restante do dashboard (PCC exclui "Deposit"; PE conta GMV só "Sem SK", taxas contam sempre). Tx Entrega (2ª Via) não entra aqui por ser um valor global da planilha Acompanhamento, sem quebra por cliente.</div>
+  </div>
   </div>
 </div>
 
@@ -713,7 +721,30 @@ function togglePwd(){
     document.getElementById('gFrom')?.addEventListener('change', ()=>{ if(_gTotPopup.classList.contains('show')) ncliUpdateGmvTotalPopup(); });
     document.getElementById('gTo')?.addEventListener('change', ()=>{ if(_gTotPopup.classList.contains('show')) ncliUpdateGmvTotalPopup(); });
   }
+
+  // Redesenha o grafico ao exibir a sub-aba (o canvas fica display:none
+  // ate o usuario clicar em "Clientes Novos" — sem isso o Chart.js pode
+  // inicializar com altura 0). Chamado por cliShowSub() abaixo.
+  window.ncliOnShow = function(){ ncliBuildChart(); ncliBuildKpis(); ncliRenderTable(); };
 })();
+</script>
+
+<script>
+// ===== Sub-abas da aba Clientes: "Visão Geral" (conteúdo original) vs.
+// "Clientes Novos" (painel de incremento por estreia). Adicionado 11/Ago/2026
+// a pedido do usuario — mesmo padrao ja usado em qzShowSub (aba Quinzena). =====
+window.cliShowSub = function(which){
+  var geral = document.getElementById('cli-sub-geral'), novos = document.getElementById('cli-sub-novos');
+  var bG = document.getElementById('cliSubBtnGeral'), bN = document.getElementById('cliSubBtnNovos');
+  if (!geral || !novos) return;
+  var showNovos = which === 'novos';
+  geral.style.display = showNovos ? 'none' : '';
+  novos.style.display = showNovos ? '' : 'none';
+  [bG, bN].forEach(function(b){ if (b) { b.style.background = 'var(--card)'; b.style.color = 'var(--text)'; b.style.border = '1px solid var(--border)'; } });
+  var active = showNovos ? bN : bG;
+  if (active) { active.style.background = 'var(--accent2)'; active.style.color = '#fff'; active.style.border = 'none'; }
+  if (showNovos && window.ncliOnShow) window.ncliOnShow();
+};
 </script>
 
 <script>
