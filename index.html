@@ -149,6 +149,18 @@
   .search-input { background:var(--card2); border:1px solid var(--border); color:var(--text); padding:6px 12px; border-radius:7px; font-size:12px; outline:none; width:220px; }
   .search-input:focus { border-color:var(--accent); }
   .client-count { font-size:12px; color:var(--muted); margin-left:auto; }
+  /* Clientes Novos (aba Clientes) + popup GMV Total — adicionado 11/Ago/2026 */
+  .ncli-toggle.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .ncli-pill { background:var(--card2); border:1px solid var(--border); border-radius:20px; padding:2px 10px; font-size:11px; color:var(--accent2); white-space:nowrap; }
+  .ncli-val-gmv { color:var(--accent3); font-weight:600; }
+  .ncli-val-rec { color:var(--accent4); font-weight:600; }
+  .kpi-info { position:relative; display:inline-flex; }
+  .kpi-info-ico { width:14px; height:14px; border-radius:50%; background:var(--border); color:var(--muted); font-size:10px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; margin-left:5px; cursor:help; vertical-align:middle; }
+  .kpi-info-popup { display:none; position:absolute; z-index:30; background:#11131a; border:1px solid var(--border); border-radius:10px; padding:12px 14px; font-size:12px; color:var(--text); width:230px; box-shadow:0 10px 30px rgba(0,0,0,.5); top:calc(100% + 8px); left:0; }
+  .kpi-info-popup.show { display:block; }
+  .kpi-info-popup .ptitle { font-weight:700; color:var(--accent4); margin-bottom:6px; font-size:12px; }
+  .kpi-info-popup .prow { display:flex; justify-content:space-between; gap:10px; margin-bottom:3px; color:var(--muted); }
+  .kpi-info-popup .prow b { color:var(--text); }
 
   .client-tag-wrap{display:flex;flex-wrap:wrap;gap:5px;align-items:center;flex:1;min-width:180px;max-width:400px;background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:4px 8px;cursor:text;position:relative;}
   .client-tag-wrap:focus-within{border-color:var(--accent);}
@@ -330,7 +342,7 @@ function togglePwd(){
     <button class="filter-btn" onclick="resetGmv()">Limpar</button>
   </div>
   <div class="kpi-grid">
-    <div class="kpi cyan"><div class="kpi-label" id="g-tot-lbl">GMV Total</div><div class="kpi-value" id="g-tot-val">—</div><div class="kpi-sub">VT + PAT</div><div class="kpi-delta" id="g-tot-d"></div></div>
+    <div class="kpi cyan"><div class="kpi-label" id="g-tot-lbl">GMV Total <span class="kpi-info"><span class="kpi-info-ico" id="g-tot-info-ico">i</span><span class="kpi-info-popup" id="g-tot-info-popup"><div class="ptitle">📈 Incremento de Clientes Novos</div><div class="prow"><span>GMV novos:</span><b id="g-tot-pop-gmv">-</b></div><div class="prow"><span>% do GMV total:</span><b id="g-tot-pop-pct">-</b></div><div class="prow"><span>Clientes novos:</span><b id="g-tot-pop-qtd">-</b></div><div class="prow" style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;"><span>Receita novos:</span><b id="g-tot-pop-rec">-</b></div></span></span></div><div class="kpi-value" id="g-tot-val">—</div><div class="kpi-sub">VT + PAT</div><div class="kpi-delta" id="g-tot-d"></div></div>
     <div class="kpi"><div class="kpi-label" id="g-vt-lbl">GMV VT</div><div class="kpi-value" id="g-vt-val">—</div><div class="kpi-sub">Vale Transporte</div><div class="kpi-pct blue" id="g-vt-pct"></div><div class="kpi-delta" id="g-vt-d"></div></div>
     <div class="kpi green"><div class="kpi-label" id="g-pat-lbl">GMV PAT</div><div class="kpi-value" id="g-pat-val">—</div><div class="kpi-sub">Alimentação</div><div class="kpi-pct cyan" id="g-pat-pct"></div><div class="kpi-delta" id="g-pat-d"></div></div>
     <div class="kpi amber"><div class="kpi-label" id="g-fin-lbl">Financiamento</div><div class="kpi-value" id="g-fin-val">—</div><div class="kpi-sub">Receita do mês</div><div class="kpi-delta" id="g-fin-d"></div></div>
@@ -481,7 +493,213 @@ function togglePwd(){
       <p id="riskEmptyMsg" style="text-align:center;color:var(--muted);padding:20px;display:none">Nenhum cliente encontrado.</p>
     </div>
   </div>
+
+  <div class="table-card" id="ncliCard">
+    <h3>🆕 Clientes Novos — Incremento por Estreia</h3>
+    <div style="padding:14px 18px 0;">
+      <div class="info-note">ℹ️ <strong>Nota sobre Jan/25:</strong> como o histórico do dashboard começa em Jan/25, todo cliente que já comprava antes disso aparece como "estreante" nesse mês — o pico inicial não representa clientes genuinamente novos, e sim toda a base pré-existente. A partir de Fev/25 os números refletem clientes novos de fato.</div>
+      <div class="filter-bar" style="margin-bottom:14px;">
+        <button class="filter-btn ncli-toggle active" data-metric="gmv" onclick="ncliSetMetric('gmv',this)">GMV</button>
+        <button class="filter-btn ncli-toggle" data-metric="receita" onclick="ncliSetMetric('receita',this)">Receita</button>
+        <span style="width:1px;height:22px;background:var(--border);"></span>
+        <label>📅 Mês de referência:</label>
+        <select id="ncliMesFiltro" onchange="ncliOnMesChange()"></select>
+      </div>
+    </div>
+    <div style="padding:0 18px;">
+      <div class="chart-card" style="margin-bottom:16px;">
+        <h3 id="ncliChartTitle" style="padding:0;border:none;margin-bottom:2px;">GMV Total vs. GMV de Clientes Novos</h3>
+        <p class="chart-sub" id="ncliChartSub">Linha cinza = total do mês · Barra verde = gerado por clientes na estreia</p>
+        <div class="chart-wrap"><canvas id="ncliChart"></canvas></div>
+      </div>
+      <div class="kpi-grid" id="ncliKpiRow" style="margin-bottom:16px;"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 18px 10px;">
+      <div>
+        <p class="chart-sub" style="margin:0;">Cadastro × 1ª Compra por cliente — valores referentes ao mês da estreia (não acumulado)</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span class="client-count" id="ncliTblCount"></span>
+        <input class="search-input" id="ncliTblSearch" placeholder="Buscar empresa ou CNPJ..." oninput="ncliOnSearch(event)">
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table style="width:100%;">
+        <thead><tr>
+          <th data-k="empresa" style="cursor:pointer;">Empresa</th>
+          <th data-k="cnpj" style="cursor:pointer;">CNPJ</th>
+          <th data-k="cadastro" style="cursor:pointer;">Data Cadastro</th>
+          <th data-k="mes1compra" style="cursor:pointer;">Mês 1ª Compra</th>
+          <th data-k="gmv" style="cursor:pointer;text-align:right;">GMV Estreia</th>
+          <th data-k="receita" style="cursor:pointer;text-align:right;">Receita Estreia</th>
+        </tr></thead>
+        <tbody id="ncliTblBody"></tbody>
+      </table>
+    </div>
+    <div class="info-note" style="margin:10px 18px 14px;">ℹ️ Receita = Tx Adm + Tx Sucesso (PCC + Pedido Externo), mesma regra de GMV do restante do dashboard (PCC exclui "Deposit"; PE conta GMV só "Sem SK", taxas contam sempre). Tx Entrega (2ª Via) não entra aqui por ser um valor global da planilha Acompanhamento, sem quebra por cliente.</div>
+  </div>
 </div>
+
+<script>
+// ===== CLIENTES NOVOS — Incremento por Estreia (aba Clientes). Adicionado
+// em 11/Ago/2026 a partir de protótipo validado pelo usuario. Dados via
+// ncliGmvNovos/ncliRecNovos/ncliQtdNovos/ncliTable (gerados no update_vars.py,
+// mesma regra de GMV/Receita oficial do dashboard). =====
+(function(){
+  function ncliFmt2(v){ return 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  let ncliMetric = 'gmv';
+  let ncliChartObj = null;
+  let ncliSortKey = 'mes1compra';
+  let ncliSortDir = -1;
+  let ncliSearchQ = '';
+
+  window.ncliSetMetric = function(metric, btn){
+    ncliMetric = metric;
+    document.querySelectorAll('.ncli-toggle').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    ncliBuildChart();
+    ncliBuildKpis();
+  };
+
+  function ncliAutoIdx(){
+    let idx = months.length - 1;
+    while (idx > 0 && (ncliQtdNovos[idx]||0) === 0 && (ncliGmvNovos[idx]||0) === 0 && (ncliRecNovos[idx]||0) === 0) idx--;
+    return idx;
+  }
+  function ncliSelectedIdx(){
+    const sel = document.getElementById('ncliMesFiltro');
+    if (!sel || sel.value === 'auto') return ncliAutoIdx();
+    return parseInt(sel.value, 10);
+  }
+
+  function ncliBuildChart(){
+    const ctx = document.getElementById('ncliChart').getContext('2d');
+    const totalData = ncliMetric === 'gmv' ? gmvVT : recVT;
+    const novosData = ncliMetric === 'gmv' ? ncliGmvNovos : ncliRecNovos;
+    document.getElementById('ncliChartTitle').textContent = ncliMetric === 'gmv'
+      ? 'GMV Total vs. GMV de Clientes Novos' : 'Receita Total vs. Receita de Clientes Novos';
+    if (ncliChartObj) ncliChartObj.destroy();
+    ncliChartObj = new Chart(ctx, {
+      data: {
+        labels: months,
+        datasets: [
+          {type:'bar', label:'Incremento clientes novos', data:novosData, backgroundColor:C.green, borderRadius:5, order:2},
+          {type:'line', label:'Total do mês', data:totalData, borderColor:C.slate, backgroundColor:'transparent', borderWidth:2, pointRadius:2, tension:.3, order:1}
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index', intersect:false},
+        plugins:{ legend:{labels:{color:'#94a3b8', usePointStyle:true}},
+          tooltip:{callbacks:{label: c => ' ' + c.dataset.label + ': ' + fmt(c.parsed.y)}} },
+        scales:{ x:{ticks:{color:'#94a3b8'}, grid}, y:{ticks:{color:'#94a3b8', callback:v=>fmt(v,true)}, grid} }
+      }
+    });
+  }
+
+  function ncliBuildKpis(){
+    const idx = ncliSelectedIdx();
+    const mesLbl = months[idx];
+    const totalVal = ncliMetric === 'gmv' ? (gmvVT[idx]||0) : (recVT[idx]||0);
+    const novoVal = ncliMetric === 'gmv' ? (ncliGmvNovos[idx]||0) : (ncliRecNovos[idx]||0);
+    const pct = totalVal > 0 ? (novoVal / totalVal * 100) : 0;
+    const kpis = [
+      {cls:'green', lbl:'Incremento '+(ncliMetric==='gmv'?'GMV':'Receita')+' ('+mesLbl+')', val: ncliMetric==='gmv'?fmt(novoVal,true):ncliFmt2(novoVal), sub:'Gerado por clientes na estreia'},
+      {cls:'amber', lbl:'% do total do mês', val: pct.toFixed(1)+'%', sub: mesLbl+' · '+(ncliMetric==='gmv'?fmt(totalVal,true):ncliFmt2(totalVal))+' total'},
+      {cls:'cyan', lbl:'Clientes novos ('+mesLbl+')', val: (ncliQtdNovos[idx]||0), sub:'1ª compra registrada no mês'},
+      {cls:'purple', lbl:'Acumulado no período', val: ncliMetric==='gmv' ? fmt(ncliGmvNovos.reduce((a,b)=>a+b,0),true) : ncliFmt2(ncliRecNovos.reduce((a,b)=>a+b,0)), sub:months[0]+' – '+months[months.length-1]}
+    ];
+    document.getElementById('ncliKpiRow').innerHTML = kpis.map(k=>
+      `<div class="kpi ${k.cls}"><div class="kpi-label">${k.lbl}</div><div class="kpi-value">${k.val}</div><div class="kpi-sub">${k.sub}</div></div>`
+    ).join('');
+  }
+
+  function ncliMonthSortVal(lbl){ const i = months.indexOf(lbl); return i===-1 ? -1 : i; }
+
+  function ncliRenderTable(){
+    const sel = document.getElementById('ncliMesFiltro');
+    const mesFilterActive = sel && sel.value !== 'auto';
+    const mesFilterLbl = mesFilterActive ? months[parseInt(sel.value,10)] : null;
+    let rows = ncliTable.map(r=>({cnpj:r[0], empresa:r[1], cadastro:r[2], mes1compra:r[3], gmv:r[4], receita:r[5]}));
+    rows = rows.filter(r=>{
+      if (mesFilterActive && r.mes1compra !== mesFilterLbl) return false;
+      if (!ncliSearchQ) return true;
+      const q = ncliSearchQ.toLowerCase();
+      const qd = q.replace(/\D/g,'');
+      return r.empresa.toLowerCase().includes(q) || r.cnpj.includes(q) || (qd && r.cnpj.replace(/\D/g,'').includes(qd));
+    });
+    rows.sort((a,b)=>{
+      let av = a[ncliSortKey], bv = b[ncliSortKey];
+      if (ncliSortKey === 'mes1compra') { av = ncliMonthSortVal(av); bv = ncliMonthSortVal(bv); }
+      else if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+      if (av < bv) return -1 * ncliSortDir;
+      if (av > bv) return 1 * ncliSortDir;
+      return 0;
+    });
+    const filtroTxt = mesFilterActive ? (' em ' + mesFilterLbl) : '';
+    document.getElementById('ncliTblCount').textContent = rows.length.toLocaleString('pt-BR') + ' clientes' + filtroTxt;
+    document.getElementById('ncliTblBody').innerHTML = rows.map(r=>
+      `<tr><td>${r.empresa}</td><td style="color:var(--muted);">${r.cnpj}</td><td>${r.cadastro}</td><td><span class="ncli-pill">${r.mes1compra}</span></td><td style="text-align:right;" class="ncli-val-gmv">${ncliFmt2(r.gmv)}</td><td style="text-align:right;" class="ncli-val-rec">${ncliFmt2(r.receita)}</td></tr>`
+    ).join('');
+  }
+
+  window.ncliOnSearch = function(e){ ncliSearchQ = e.target.value; ncliRenderTable(); };
+  window.ncliOnMesChange = function(){ ncliBuildKpis(); ncliRenderTable(); };
+
+  document.querySelectorAll('#ncliCard th[data-k]').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const k = th.dataset.k;
+      if (ncliSortKey === k) ncliSortDir *= -1; else { ncliSortKey = k; ncliSortDir = (k === 'mes1compra' ? -1 : 1); }
+      ncliRenderTable();
+    });
+  });
+
+  (function ncliPopulateMesFiltro(){
+    const sel = document.getElementById('ncliMesFiltro');
+    sel.innerHTML = '<option value="auto">Automático (último com dados)</option>';
+    months.forEach((ml, i)=>{
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = ml + ((ncliQtdNovos[i]||0) > 0 ? ' · '+ncliQtdNovos[i]+' novos' : ' · sem novos');
+      sel.appendChild(opt);
+    });
+  })();
+
+  ncliBuildChart();
+  ncliBuildKpis();
+  ncliRenderTable();
+
+  // Expor dados agregados para o popup do card "GMV Total" (aba GMV).
+  window.ncliMonthData = function(idx){
+    const gTot = gmvVT[idx] || 0;
+    const gNov = ncliGmvNovos[idx] || 0;
+    return { gmvNovos: gNov, pct: gTot>0 ? (gNov/gTot*100) : 0, qtd: ncliQtdNovos[idx]||0, recNovos: ncliRecNovos[idx]||0 };
+  };
+
+  // Popup "Incremento de Clientes Novos" no card real GMV Total (aba GMV) —
+  // usa o mesmo mes selecionado no filtro de periodo da aba (select #gTo).
+  // Atualizado sob demanda (hover/click), nao no load, pois #gTo ainda nao
+  // tem opcoes quando este script roda (populado depois, mais abaixo no HTML).
+  function ncliUpdateGmvTotalPopup(){
+    const gt = document.getElementById('gTo');
+    const idx = (gt && gt.value !== '') ? parseInt(gt.value, 10) : (months.length - 1);
+    const d = window.ncliMonthData(idx);
+    document.getElementById('g-tot-pop-gmv').textContent = fmt(d.gmvNovos, true);
+    document.getElementById('g-tot-pop-pct').textContent = d.pct.toFixed(1) + '%';
+    document.getElementById('g-tot-pop-qtd').textContent = d.qtd + ' clientes';
+    document.getElementById('g-tot-pop-rec').textContent = ncliFmt2(d.recNovos);
+  }
+  const _gTotIco = document.getElementById('g-tot-info-ico');
+  const _gTotPopup = document.getElementById('g-tot-info-popup');
+  if (_gTotIco && _gTotPopup) {
+    _gTotIco.addEventListener('mouseenter', ()=>{ ncliUpdateGmvTotalPopup(); _gTotPopup.classList.add('show'); });
+    _gTotIco.addEventListener('mouseleave', ()=>_gTotPopup.classList.remove('show'));
+    _gTotIco.addEventListener('click', (e)=>{ e.stopPropagation(); ncliUpdateGmvTotalPopup(); _gTotPopup.classList.toggle('show'); });
+    document.getElementById('gFrom')?.addEventListener('change', ()=>{ if(_gTotPopup.classList.contains('show')) ncliUpdateGmvTotalPopup(); });
+    document.getElementById('gTo')?.addEventListener('change', ()=>{ if(_gTotPopup.classList.contains('show')) ncliUpdateGmvTotalPopup(); });
+  }
+})();
+</script>
 
 <script>
 // ===== ALERTA DE CLIENTES EM RISCO (aba Clientes) — dias reais desde a
