@@ -654,7 +654,7 @@ function togglePwd(){
     });
   });
 
-  (function ncliPopulateMesFiltro(){
+  function ncliPopulateMesFiltro(){
     const sel = document.getElementById('ncliMesFiltro');
     sel.innerHTML = '<option value="auto">Automático (último com dados)</option>';
     months.forEach((ml, i)=>{
@@ -663,11 +663,26 @@ function togglePwd(){
       opt.textContent = ml + ((ncliQtdNovos[i]||0) > 0 ? ' · '+ncliQtdNovos[i]+' novos' : ' · sem novos');
       sel.appendChild(opt);
     });
-  })();
+  }
 
-  ncliBuildChart();
-  ncliBuildKpis();
-  ncliRenderTable();
+  // Init adiado para DOMContentLoaded: este script roda logo apos a aba
+  // Clientes no HTML (bem antes do bloco que declara "const months=...",
+  // "gmvVT", etc. — ver REGRAS_DASHBOARD.md/estrutura do arquivo), entao
+  // chamar ncliBuildChart/ncliBuildKpis/ncliRenderTable direto aqui dispara
+  // "ReferenceError: months is not defined". DOMContentLoaded garante que
+  // TODOS os <script> inline do documento (incluindo o que declara months/
+  // gmvVT/C/Chart) ja rodaram, independente de onde este bloco esta no HTML.
+  function ncliInit(){
+    ncliPopulateMesFiltro();
+    ncliBuildChart();
+    ncliBuildKpis();
+    ncliRenderTable();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ncliInit);
+  } else {
+    ncliInit();
+  }
 
   // Expor dados agregados para o popup do card "GMV Total" (aba GMV).
   window.ncliMonthData = function(idx){
