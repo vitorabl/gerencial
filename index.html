@@ -6729,6 +6729,8 @@ window.buildSummary=function(){
   var trVT_A=gVT_A?rVT_A/gVT_A*100:0, trVT_B=gVT_B?rVT_B/gVT_B*100:0;
   var trTot_A=gTot_A?rTot_A/gTot_A*100:0, trTot_B=gTot_B?rTot_B/gTot_B*100:0;
   var projTot_A=getTotProj(idxA), projTot_B=getTotProj(idxB);
+  var gNov_A=(typeof ncliGmvNovos!=='undefined'?ncliGmvNovos[idxA]:0)||0;
+  var gNov_B=(typeof ncliGmvNovos!=='undefined'?ncliGmvNovos[idxB]:0)||0;
 
   var area=document.getElementById('sum-kpi-area');
   area.innerHTML=
@@ -6737,6 +6739,7 @@ window.buildSummary=function(){
       kpiCard('GMV VT',gVT_A,gVT_B,mA,mB,fmtM,false)+
       kpiCard('GMV PAT',gPAT_A,gPAT_B,mA,mB,fmtM,false)+
       kpiCard('GMV Total',gTot_A,gTot_B,mA,mB,fmtM,false)+
+      kpiCard('GMV Clientes Novos',gNov_A,gNov_B,mA,mB,fmtM,false)+
     '</div>'+
     '<div style="margin:12px 0 6px;font-size:12px;font-weight:700;color:var(--text);">💰 Receita (NF) & Take Rate</div>'+
     '<div class="kpi-grid">'+
