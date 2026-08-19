@@ -37,20 +37,25 @@
   .badge { background:var(--accent);color:white;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600; }
   .gap-badge { background:var(--accent3);color:#1a1200;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600; }
 
-  .tabs { display:flex;gap:4px;padding:16px 32px 0;border-bottom:1px solid var(--border);background:var(--card);overflow-x:auto; }
-  .tab { padding:10px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);border:1px solid transparent;border-bottom:none;transition:all .2s;white-space:nowrap; }
-  .tab:hover { color:var(--text);background:var(--card2); }
-  .tab.active { color:var(--accent2);border-color:var(--border);background:var(--bg);font-weight:600; }
+  /* Sub-navegacao (subpaginas dentro da mesma aba) */
+  .subnav { display:flex;gap:8px;padding:16px 32px 0;background:var(--card);border-bottom:1px solid var(--border); }
+  .subtab { padding:9px 18px;border-radius:8px 8px 0 0;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);border:1px solid transparent;border-bottom:none; }
+  .subtab:hover { color:var(--text);background:var(--card2); }
+  .subtab.active { color:var(--accent2);border-color:var(--border);background:var(--bg);font-weight:600; }
 
   .content { padding: 24px 32px 48px; max-width: 1300px; margin: 0 auto; }
-  .tabpanel { display: none; }
-  .tabpanel.active { display: block; }
+  .subpanel { display: none; }
+  .subpanel.active { display: block; }
+
+  .toolbar { display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+  .toolbar label { font-size:12px; color:var(--muted); }
+  select, .search-bar input { padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--card2); color:var(--text); font-size:13px; }
 
   .kpis { display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:24px; }
   .kpi { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden; }
   .kpi::before { content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent); }
   .kpi.green::before { background:var(--accent4); } .kpi.amber::before { background:var(--accent3); }
-  .kpi.cyan::before { background:var(--accent2); }
+  .kpi.cyan::before { background:var(--accent2); } .kpi.red::before { background:var(--danger); }
   .kpi-label { font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px; }
   .kpi-val { font-size:24px;font-weight:700; }
   .kpi-sub { font-size:11px;color:var(--muted);margin-top:3px; }
@@ -67,12 +72,13 @@
   tr:hover td { background: var(--card2); }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
 
-  .search-bar { margin-bottom: 14px; }
-  .search-bar input { width:100%; max-width:320px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--card2); color:var(--text); font-size:13px; }
   .table-card { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;overflow-x:auto; }
   .table-scroll { max-height: 560px; overflow-y: auto; }
   .muted { color: var(--muted); }
   .tag { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; background:var(--card2); color: var(--accent2); }
+  .tag.status-recorrente { color: var(--accent4); }
+  .tag.status-novo { color: var(--accent2); }
+  .tag.status-inativo { color: var(--danger); }
 </style>
 </head>
 <body>
@@ -104,19 +110,24 @@
     </div>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" data-tab="rede">Rede+Saúde</div>
-    <div class="tab" data-tab="clientes">Clientes</div>
+  <div class="subnav">
+    <div class="subtab active" data-sub="visao">Visão Geral</div>
+    <div class="subtab" data-sub="clientes">Clientes</div>
   </div>
 
   <div class="content">
 
-    <div class="tabpanel active" id="tab-rede">
+    <div class="subpanel active" id="sub-visao">
+      <div class="toolbar">
+        <label for="mes-filter">Mês:</label>
+        <select id="mes-filter"></select>
+      </div>
+
       <div class="kpis">
         <div class="kpi">
           <div class="kpi-label">Faturamento Bruto</div>
           <div class="kpi-val" id="kpi-bruto">—</div>
-          <div class="kpi-sub" id="kpi-bruto-sub">último mês</div>
+          <div class="kpi-sub" id="kpi-bruto-sub">—</div>
         </div>
         <div class="kpi cyan">
           <div class="kpi-label">Faturamento Líquido</div>
@@ -131,12 +142,35 @@
         <div class="kpi amber">
           <div class="kpi-label">Volume de Vendas</div>
           <div class="kpi-val" id="kpi-volume">—</div>
-          <div class="kpi-sub" id="kpi-volume-sub">último mês</div>
+          <div class="kpi-sub" id="kpi-volume-sub">—</div>
         </div>
         <div class="kpi">
           <div class="kpi-label">Ticket Médio</div>
           <div class="kpi-val" id="kpi-ticket">—</div>
           <div class="kpi-sub">faturamento bruto / volume</div>
+        </div>
+      </div>
+
+      <div class="kpis" style="margin-bottom:24px;">
+        <div class="kpi green">
+          <div class="kpi-label">Clientes Recorrentes</div>
+          <div class="kpi-val" id="kpi-recorrentes">—</div>
+          <div class="kpi-sub">pagaram no último mês e já pagavam antes</div>
+        </div>
+        <div class="kpi cyan">
+          <div class="kpi-label">Clientes Novos</div>
+          <div class="kpi-val" id="kpi-novos">—</div>
+          <div class="kpi-sub">1º pagamento no último mês</div>
+        </div>
+        <div class="kpi red">
+          <div class="kpi-label">Clientes Inativos</div>
+          <div class="kpi-val" id="kpi-inativos">—</div>
+          <div class="kpi-sub">pagavam antes, sumiram no último mês</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Taxa de Recorrência</div>
+          <div class="kpi-val" id="kpi-taxa-recorrencia">—</div>
+          <div class="kpi-sub">recorrentes / (recorrentes + novos)</div>
         </div>
       </div>
 
@@ -146,7 +180,7 @@
           <div class="chart-wrap"><canvas id="chartEvol"></canvas></div>
         </div>
         <div class="chart-card">
-          <h3>Volume por Programa (último mês)</h3>
+          <h3>Volume por Programa — <span id="chartprog-mes-label"></span></h3>
           <div class="chart-wrap"><canvas id="chartProg"></canvas></div>
         </div>
       </div>
@@ -163,15 +197,23 @@
       </div>
     </div>
 
-    <div class="tabpanel" id="tab-clientes">
-      <div class="search-bar">
-        <input id="client-search" type="text" placeholder="Buscar por nome...">
+    <div class="subpanel" id="sub-clientes">
+      <div class="toolbar">
+        <div class="search-bar"><input id="client-search" type="text" placeholder="Buscar por nome..."></div>
+        <label for="status-filter">Status:</label>
+        <select id="status-filter">
+          <option value="">Todos</option>
+          <option value="Recorrente">Recorrentes</option>
+          <option value="Novo">Novos</option>
+          <option value="Inativo">Inativos</option>
+        </select>
       </div>
       <div class="table-card">
         <div class="table-scroll">
         <table>
           <thead><tr>
-            <th>Nome</th><th>CPF</th><th>Programa Atual</th><th class="num">Pagamentos</th>
+            <th>Nome</th><th>CPF</th><th>Programa Atual</th><th>Status</th>
+            <th class="num">Meses Pagos</th><th class="num">Seq. Consecutiva</th>
             <th class="num">Total Pago</th><th>Último Mês</th>
           </tr></thead>
           <tbody id="client-table-body"></tbody>
@@ -186,16 +228,17 @@
 
 <script>
 /* RS_DATA_START */
-const RS_LABELS=["Ago/25", "Set/25", "Out/25", "Nov/25", "Dez/25", "Jan/26", "Fev/26", "Mar/26", "Abr/26", "Mai/26", "Jun/26", "Jul/26"];
-const RS_VOL=[3, 6, 10, 17, 26, 28, 23, 0, 29, 27, 26, 25];
-const RS_BRUTO=[48.3, 88.0, 137.6, 208.3, 297.4, 327.2, 262.7, 0, 505.7, 302.3, 292.4, 282.5];
-const RS_LIQUIDO=[43.47, 79.2, 123.84, 187.47, 267.66, 294.48, 236.43, 0, 455.13, 272.07, 263.16, 254.25];
-const RS_PARTICIPACAO=[21.8, 38.3, 60.8, 93.0, 133.5, 147.0, 118.5, 0, 227.3, 136.5, 132.0, 127.5];
-const RS_REPASSE=[21.67, 40.9, 63.04, 94.47, 134.16, 147.48, 117.93, 0, 227.83, 135.57, 131.16, 126.75];
-const RS_PROG_BREAKDOWN={"Ago/25": {"ESSENCIAL TITULAR": {"vol": 1, "bruto": 9.9, "liquido": 8.91, "participacao": 4.5, "repasse": 4.41}, "COMPLETO TITULAR": {"vol": 1, "bruto": 19.9, "liquido": 17.91, "participacao": 9.0, "repasse": 8.91}, "ESSENCIAL T+3": {"vol": 1, "bruto": 18.5, "liquido": 16.65, "participacao": 8.3, "repasse": 8.35}}, "Set/25": {"COMPLETO TITULAR": {"vol": 1, "bruto": 19.9, "liquido": 17.91, "participacao": 9.0, "repasse": 8.91}, "INTERMEDIARIO TITULAR": {"vol": 2, "bruto": 29.8, "liquido": 26.82, "participacao": 12.0, "repasse": 14.82}, "ESSENCIAL TITULAR": {"vol": 2, "bruto": 19.8, "liquido": 17.82, "participacao": 9.0, "repasse": 8.82}, "ESSENCIAL T+3": {"vol": 1, "bruto": 18.5, "liquido": 16.65, "participacao": 8.3, "repasse": 8.35}}, "Out/25": {"ESSENCIAL TITULAR": {"vol": 5, "bruto": 49.5, "liquido": 44.55, "participacao": 22.5, "repasse": 22.05}, "INTERMEDIARIO TITULAR": {"vol": 2, "bruto": 29.8, "liquido": 26.82, "participacao": 12.0, "repasse": 14.82}, "ESSENCIAL T+3": {"vol": 1, "bruto": 18.5, "liquido": 16.65, "participacao": 8.3, "repasse": 8.35}, "COMPLETO TITULAR": {"vol": 2, "bruto": 39.8, "liquido": 35.82, "participacao": 18.0, "repasse": 17.82}}, "Nov/25": {"ESSENCIAL TITULAR": {"vol": 12, "bruto": 118.8, "liquido": 106.92, "participacao": 54.0, "repasse": 52.92}, "INTERMEDIARIO TITULAR": {"vol": 2, "bruto": 29.8, "liquido": 26.82, "participacao": 12.0, "repasse": 14.82}, "COMPLETO TITULAR": {"vol": 3, "bruto": 59.7, "liquido": 53.73, "participacao": 27.0, "repasse": 26.73}}, "Dez/25": {"ESSENCIAL TITULAR": {"vol": 21, "bruto": 207.9, "liquido": 187.11, "participacao": 94.5, "repasse": 92.61}, "COMPLETO TITULAR": {"vol": 3, "bruto": 59.7, "liquido": 53.73, "participacao": 27.0, "repasse": 26.73}, "INTERMEDIARIO TITULAR": {"vol": 2, "bruto": 29.8, "liquido": 26.82, "participacao": 12.0, "repasse": 14.82}}, "Jan/26": {"ESSENCIAL TITULAR": {"vol": 22, "bruto": 217.8, "liquido": 196.02, "participacao": 99.0, "repasse": 97.02}, "COMPLETO TITULAR": {"vol": 4, "bruto": 79.6, "liquido": 71.64, "participacao": 36.0, "repasse": 35.64}, "INTERMEDIARIO TITULAR": {"vol": 2, "bruto": 29.8, "liquido": 26.82, "participacao": 12.0, "repasse": 14.82}}, "Fev/26": {"COMPLETO TITULAR": {"vol": 3, "bruto": 59.7, "liquido": 53.73, "participacao": 27.0, "repasse": 26.73}, "INTERMEDIARIO TITULAR": {"vol": 1, "bruto": 14.9, "liquido": 13.41, "participacao": 6.0, "repasse": 7.41}, "ESSENCIAL TITULAR": {"vol": 19, "bruto": 188.1, "liquido": 169.29, "participacao": 85.5, "repasse": 83.79}}, "Abr/26": {"COMPLETO TITULAR": {"vol": 20, "bruto": 398.0, "liquido": 358.2, "participacao": 180.0, "repasse": 178.2}, "INTERMEDIARIO TITULAR": {"vol": 2, "bruto": 29.8, "liquido": 26.82, "participacao": 12.0, "repasse": 14.82}, "ESSENCIAL TITULAR": {"vol": 6, "bruto": 59.4, "liquido": 53.46, "participacao": 27.0, "repasse": 26.46}, "ESSENCIAL T+3": {"vol": 1, "bruto": 18.5, "liquido": 16.65, "participacao": 8.3, "repasse": 8.35}}, "Mai/26": {"COMPLETO TITULAR": {"vol": 3, "bruto": 59.7, "liquido": 53.73, "participacao": 27.0, "repasse": 26.73}, "INTERMEDIARIO TITULAR": {"vol": 1, "bruto": 14.9, "liquido": 13.41, "participacao": 6.0, "repasse": 7.41}, "ESSENCIAL TITULAR": {"vol": 23, "bruto": 227.7, "liquido": 204.93, "participacao": 103.5, "repasse": 101.43}}, "Jun/26": {"COMPLETO TITULAR": {"vol": 3, "bruto": 59.7, "liquido": 53.73, "participacao": 27.0, "repasse": 26.73}, "INTERMEDIARIO TITULAR": {"vol": 1, "bruto": 14.9, "liquido": 13.41, "participacao": 6.0, "repasse": 7.41}, "ESSENCIAL TITULAR": {"vol": 22, "bruto": 217.8, "liquido": 196.02, "participacao": 99.0, "repasse": 97.02}}, "Jul/26": {"COMPLETO TITULAR": {"vol": 3, "bruto": 59.7, "liquido": 53.73, "participacao": 27.0, "repasse": 26.73}, "INTERMEDIARIO TITULAR": {"vol": 1, "bruto": 14.9, "liquido": 13.41, "participacao": 6.0, "repasse": 7.41}, "ESSENCIAL TITULAR": {"vol": 21, "bruto": 207.9, "liquido": 187.11, "participacao": 94.5, "repasse": 92.61}}};
-const RS_CLIENTES=[{"nome": "NAILA KALINE SOUZA OLIVEIRA", "cpf_masked": "087.***.**5-47", "programa_atual": "INTERMEDIARIO TITULAR", "qtd_pagamentos": 10, "total_pago": 149.0, "ultimo_mes": "2026-07"}, {"nome": "CARLA DOS SANTOS SANTANA", "cpf_masked": "036.***.**5-62", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 9, "total_pago": 179.1, "ultimo_mes": "2026-07"}, {"nome": "JOCELIA SCHRODER", "cpf_masked": "103.***.**7-71", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 8, "total_pago": 79.2, "ultimo_mes": "2026-07"}, {"nome": "TAINA SENA DA COSTA", "cpf_masked": "040.***.**5-30", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 8, "total_pago": 79.2, "ultimo_mes": "2026-07"}, {"nome": "JOCLEIDE SOUSA MEDEIROS", "cpf_masked": "044.***.**5-46", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 7, "total_pago": 69.3, "ultimo_mes": "2026-07"}, {"nome": "JUCIMAR SOUZA DOS SANTOS", "cpf_masked": "765.***.**5-72", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 7, "total_pago": 69.3, "ultimo_mes": "2026-07"}, {"nome": "JADE NATIVIDADE OLIVEIRA", "cpf_masked": "867.***.**5-04", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 4, "total_pago": 39.6, "ultimo_mes": "2026-07"}, {"nome": "INARA PEREIRA DOS SANTOS", "cpf_masked": "864.***.**5-08", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 6, "total_pago": 59.4, "ultimo_mes": "2026-07"}, {"nome": "ENDERSON TIAGO BARRETO DOS SANTOS", "cpf_masked": "097.***.**5-43", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 4, "total_pago": 39.6, "ultimo_mes": "2026-07"}, {"nome": "AMANDA MUNIZ", "cpf_masked": "104.***.**5-54", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 4, "total_pago": 39.6, "ultimo_mes": "2026-07"}, {"nome": "NOELIA DENISE CHERINO", "cpf_masked": "099.***.**1-07", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 4, "total_pago": 79.6, "ultimo_mes": "2026-07"}, {"nome": "EVELYN G Q M DE JESUS", "cpf_masked": "864.***.**5-30", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 4, "total_pago": 39.6, "ultimo_mes": "2026-07"}, {"nome": "VINICIUS R LEITE", "cpf_masked": "051.***.**5-70", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 4, "total_pago": 79.6, "ultimo_mes": "2026-07"}, {"nome": "LAIS DOS SANTOS MOREIRA", "cpf_masked": "071.***.**5-63", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 4, "total_pago": 39.6, "ultimo_mes": "2026-07"}, {"nome": "KAIQUE ALMEIDA DA SILVA", "cpf_masked": "088.***.**5-48", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 3, "total_pago": 29.7, "ultimo_mes": "2026-07"}, {"nome": "DOUGLAS NEMEZIO FIGUEREDO SOUSA", "cpf_masked": "098.***.**5-35", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 3, "total_pago": 29.7, "ultimo_mes": "2026-07"}, {"nome": "FELIPE SALES DE CERQUEIRA", "cpf_masked": "864.***.**5-02", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 3, "total_pago": 29.7, "ultimo_mes": "2026-07"}, {"nome": "ISAC DANILO SOARES FORTES", "cpf_masked": "863.***.**5-98", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 3, "total_pago": 29.7, "ultimo_mes": "2026-07"}, {"nome": "LAIS CERQUEIRA NASCIMENTO", "cpf_masked": "033.***.**5-71", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 3, "total_pago": 29.7, "ultimo_mes": "2026-07"}, {"nome": "RODRIGO COSTA BARBOSA", "cpf_masked": "857.***.**5-80", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-07"}, {"nome": "ANDRESA BIANCA ROCHA PASSOS", "cpf_masked": "078.***.**5-06", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-07"}, {"nome": "ADRIANA COELHO SANTA RITA", "cpf_masked": "816.***.**5-34", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-07"}, {"nome": "LUANE MOREIRA SANTOS BRITO", "cpf_masked": "090.***.**5-41", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-07"}, {"nome": "DANILO DE JESUS ANTUNES", "cpf_masked": "089.***.**5-85", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-07"}, {"nome": "EMILE SANTOS FERREIRA", "cpf_masked": "086.***.**5-40", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-07"}, {"nome": "CAMILA JENIFER DOS REIS MAGALHAES", "cpf_masked": "867.***.**5-62", "programa_atual": "NAO INFORMADO", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-06"}, {"nome": "TAINA DE JESUS SANTANA", "cpf_masked": "860.***.**5-74", "programa_atual": "NAO INFORMADO", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-06"}, {"nome": "HORTENCIA DOS SANTOS ABREU", "cpf_masked": "102.***.**5-00", "programa_atual": "NAO INFORMADO", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-06"}, {"nome": "LUCAS PINHO DOS SANTOS", "cpf_masked": "054.***.**5-02", "programa_atual": "NAO INFORMADO", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-06"}, {"nome": "VANESSA DOS SANTOS VIDAL", "cpf_masked": "055.***.**5-50", "programa_atual": "NAO INFORMADO", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-06"}, {"nome": "BENTO LEANDRO PIRES", "cpf_masked": "714.***.**6-98", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 3, "total_pago": 29.7, "ultimo_mes": "2026-05"}, {"nome": "GABRIEL ALVES SANTOS", "cpf_masked": "095.***.**5-41", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-05"}, {"nome": "ANA LEIDE DOS SANTOS COUTINHO", "cpf_masked": "869.***.**5-00", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-05"}, {"nome": "IVAN ALMEIDA DOS SANTOS", "cpf_masked": "864.***.**5-32", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-05"}, {"nome": "ARLEIDE DE JESUS LEAL", "cpf_masked": "858.***.**5-54", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-05"}, {"nome": "MAISA PEREIRA DE SOUZA", "cpf_masked": "348.***.**8-80", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-05"}, {"nome": "ALANA MERCES", "cpf_masked": "083.***.**5-64", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-04"}, {"nome": "LUAN OLIVEIRA DA SILVA", "cpf_masked": "025.***.**5-74", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-04"}, {"nome": "LARISSA SOUZA SANTOS DE ANDRADE", "cpf_masked": "040.***.**5-75", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 39.8, "ultimo_mes": "2026-04"}, {"nome": "SULAMITA DE ARAUJO DOS SANTOS", "cpf_masked": "862.***.**5-76", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 19.9, "ultimo_mes": "2026-04"}, {"nome": "LIRIANY DA ROSA BIANCHIN", "cpf_masked": "062.***.**0-84", "programa_atual": "ESSENCIAL T+3", "qtd_pagamentos": 1, "total_pago": 18.5, "ultimo_mes": "2026-04"}, {"nome": "THAUANA LESSA PEREIRA", "cpf_masked": "032.***.**5-17", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-04"}, {"nome": "VITORIA BEATRIZ MATOS XAVIER", "cpf_masked": "868.***.**5-38", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-04"}, {"nome": "MAYA MOREIRA FRANCA", "cpf_masked": "043.***.**5-68", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 19.9, "ultimo_mes": "2026-04"}, {"nome": "SANDRA MARIA DOS SANTOS MOREIRA", "cpf_masked": "851.***.**5-25", "programa_atual": "INTERMEDIARIO TITULAR", "qtd_pagamentos": 1, "total_pago": 14.9, "ultimo_mes": "2026-04"}, {"nome": "VANESSA CONCEICAO SILVA", "cpf_masked": "092.***.**5-40", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-04"}, {"nome": "JHONATAN DA COSTA SANTOS", "cpf_masked": "861.***.**5-59", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-04"}, {"nome": "TISSIANE FRANCINE BARBOSA DOS SANTOS", "cpf_masked": "019.***.**5-01", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-04"}, {"nome": "RAINE JOBELANE", "cpf_masked": "853.***.**5-20", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-04"}, {"nome": "LORENA DOS SANTOS GUERRA", "cpf_masked": "866.***.**5-57", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-04"}, {"nome": "CARINE DE ANDRADE MATA FREITAS", "cpf_masked": "858.***.**5-30", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 3, "total_pago": 29.7, "ultimo_mes": "2026-02"}, {"nome": "MARIA EDUARDA CERQUEIRA VILAS BOAS", "cpf_masked": "097.***.**5-39", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-02"}, {"nome": "ANTONIO MARCOS PINHO SANTOS DE OLIVEIR", "cpf_masked": "862.***.**5-12", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-02"}, {"nome": "LUANNE MICHELE DOS SANTOS CRUZ", "cpf_masked": "110.***.**5-35", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 2, "total_pago": 39.8, "ultimo_mes": "2026-02"}, {"nome": "JOSEANE CRISTIANE BARBOSA DOS SANTOS", "cpf_masked": "677.***.**5-00", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-02"}, {"nome": "FLAVIANE NAZARIO", "cpf_masked": "089.***.**5-50", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-02"}, {"nome": "LUCAS THEMISTOCLES SILVA OLIVEIRA", "cpf_masked": "053.***.**5-08", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-02"}, {"nome": "MARIO SERGIO FRANCA DA ANUNCIACAO", "cpf_masked": "071.***.**5-71", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-02"}, {"nome": "CESAR LUCAS BERNARDO PIRES", "cpf_masked": "059.***.**2-24", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-02"}, {"nome": "JOAO VITOR QUEIROZ SANTOS", "cpf_masked": "863.***.**5-45", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-02"}, {"nome": "SUELEM OLIVEIRA BATISTA", "cpf_masked": "068.***.**5-11", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-02"}, {"nome": "MONICA FERREIRA WENCESLAU", "cpf_masked": "079.***.**7-13", "programa_atual": "INTERMEDIARIO TITULAR", "qtd_pagamentos": 4, "total_pago": 59.6, "ultimo_mes": "2026-01"}, {"nome": "JOICE LEIDE RIBEIRO OLIVEIRA", "cpf_masked": "092.***.**5-47", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 4, "total_pago": 39.6, "ultimo_mes": "2026-01"}, {"nome": "LARA LOUISE AIRES SANTOS", "cpf_masked": "100.***.**5-08", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 3, "total_pago": 29.7, "ultimo_mes": "2026-01"}, {"nome": "LUDMILA PINHO DOS SANTOS", "cpf_masked": "061.***.**5-29", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 3, "total_pago": 29.7, "ultimo_mes": "2026-01"}, {"nome": "DEBORA NASCIMENTO MOURA", "cpf_masked": "055.***.**5-06", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-01"}, {"nome": "FERNANDA DIAS DOS SANTOS", "cpf_masked": "020.***.**5-08", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-01"}, {"nome": "ANA LICIA", "cpf_masked": "868.***.**5-81", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-01"}, {"nome": "TABATA SAMIA MESQUITA MACHADO", "cpf_masked": "071.***.**5-85", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2026-01"}, {"nome": "WASHINGTON GOUVEIA LIMA", "cpf_masked": "727.***.**5-53", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 19.9, "ultimo_mes": "2026-01"}, {"nome": "JULIA CRISTIANE LIMA", "cpf_masked": "088.***.**5-90", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-01"}, {"nome": "MATHEUS SOUZA DOS SANTOS", "cpf_masked": "865.***.**5-95", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-01"}, {"nome": "SARA SANTANA DOS SANTOS", "cpf_masked": "095.***.**5-60", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 19.9, "ultimo_mes": "2026-01"}, {"nome": "TATIANE SOUZA DA SILVA", "cpf_masked": "023.***.**5-02", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-01"}, {"nome": "CAMILE GOMES DA PAIXAO", "cpf_masked": "095.***.**5-83", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-01"}, {"nome": "ANNA VICTORIA SANTOS SOUZA", "cpf_masked": "857.***.**5-75", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2026-01"}, {"nome": "GEOVANI BATISTA DO ROSARIO", "cpf_masked": "860.***.**5-01", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2025-12"}, {"nome": "BIANCA SANTANA LIMA", "cpf_masked": "091.***.**5-00", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2025-12"}, {"nome": "TERESA CRISTINA DA ANUNCIACAO SOUZA", "cpf_masked": "037.***.**5-58", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 2, "total_pago": 39.8, "ultimo_mes": "2025-12"}, {"nome": "SARA ALANA COELHO DE MOURA", "cpf_masked": "072.***.**5-01", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2025-12"}, {"nome": "TAINARA REIS DOS SANTOS", "cpf_masked": "864.***.**5-50", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2025-12"}, {"nome": "MILENA DIAS PEREIRA", "cpf_masked": "006.***.**5-26", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 19.8, "ultimo_mes": "2025-12"}, {"nome": "GUSTAVO ENDO", "cpf_masked": "275.***.**8-74", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 2, "total_pago": 29.8, "ultimo_mes": "2025-12"}, {"nome": "ALEXIA LESLEI SOUZA SANTOS", "cpf_masked": "084.***.**5-13", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2025-12"}, {"nome": "ROBERTA NASCIMENTO DE AZEVEDO", "cpf_masked": "049.***.**5-08", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2025-12"}, {"nome": "RAYSSA KAROLLINE BARBOSA DOS SANTOS ALMEIDA DE SOUSA", "cpf_masked": "046.***.**5-66", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2025-12"}, {"nome": "GABRIELA CAROLINE DA CRUZ SANTOS", "cpf_masked": "058.***.**5-37", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 3, "total_pago": 29.7, "ultimo_mes": "2025-11"}, {"nome": "ROSANGELA KATIA DOS SANTOS", "cpf_masked": "482.***.**5-91", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2025-11"}, {"nome": "EDIANE SANTOS SILVA", "cpf_masked": "055.***.**5-86", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2025-11"}, {"nome": "JESSICA LAIANE DE OLIVEIRA CIRQUEIRA DOS SANTOS", "cpf_masked": "041.***.**5-66", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 19.9, "ultimo_mes": "2025-11"}, {"nome": "CRISTIANO DOUGLAS DA SILVA", "cpf_masked": "855.***.**5-68", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2025-11"}, {"nome": "JACIONE CARVALHO DOS SANTOS", "cpf_masked": "821.***.**5-04", "programa_atual": "ESSENCIAL T+3", "qtd_pagamentos": 3, "total_pago": 55.5, "ultimo_mes": "2025-10"}, {"nome": "TAIS DOS SANTOS MOREIRA", "cpf_masked": "063.***.**5-42", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 19.9, "ultimo_mes": "2025-10"}, {"nome": "REBECA DE JESUS SOBRAL", "cpf_masked": "068.***.**5-82", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2025-10"}, {"nome": "MARIANA LEBRE DE SOUZA", "cpf_masked": "077.***.**5-08", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2025-10"}, {"nome": "JULIANA RAQUEL FEITOSA DE ARAUJO", "cpf_masked": "046.***.**3-10", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 19.9, "ultimo_mes": "2025-09"}, {"nome": "MADSON RAMOS DE JESUS", "cpf_masked": "862.***.**5-08", "programa_atual": "INTERMEDIARIO TITULAR", "qtd_pagamentos": 1, "total_pago": 14.9, "ultimo_mes": "2025-09"}, {"nome": "LUIS HENRIQUE OLIVEIRA SANTOS", "cpf_masked": "864.***.**5-86", "programa_atual": "ESSENCIAL TITULAR", "qtd_pagamentos": 1, "total_pago": 9.9, "ultimo_mes": "2025-08"}, {"nome": "HILLARY GABRIELE BACELLAR FURTADO", "cpf_masked": "085.***.**5-97", "programa_atual": "COMPLETO TITULAR", "qtd_pagamentos": 1, "total_pago": 19.9, "ultimo_mes": "2025-08"}];
-const RS_LAST_IDX=11;
-const RS_GAPS=["Mar/26"];
+const RS_LABELS=["Ago/25"];
+const RS_VOL=[0];
+const RS_BRUTO=[0];
+const RS_LIQUIDO=[0];
+const RS_PARTICIPACAO=[0];
+const RS_REPASSE=[0];
+const RS_PROG_BREAKDOWN={};
+const RS_CLIENTES=[];
+const RS_LAST_IDX=0;
+const RS_GAPS=[];
+const RS_RECORRENCIA={novos:0,recorrentes:0,inativos:0,taxa_recorrencia:0};
 /* RS_DATA_END */
 
 var SENHA_KIM = 'KimPlus@2026';
@@ -226,7 +269,12 @@ function showApp(){
   if (document.readyState !== 'loading') initApp();
 }
 
+var fmtBRL = function(v){ return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); };
+var fmtInt = function(v){ return Number(v).toLocaleString('pt-BR'); };
+
 var _appInited = false;
+var chartEvolInstance = null, chartProgInstance = null;
+
 function initApp(){
   if (_appInited) return;
   _appInited = true;
@@ -238,31 +286,37 @@ function initApp(){
     gb.textContent = '⚠ sem dado: ' + RS_GAPS.join(', ');
   }
 
-  var fmtBRL = function(v){ return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); };
-  var fmtInt = function(v){ return Number(v).toLocaleString('pt-BR'); };
+  // Recorrencia (fixo, nao varia por mes - sempre relativo ao ultimo mes com dado)
+  document.getElementById('kpi-recorrentes').textContent = fmtInt(RS_RECORRENCIA.recorrentes);
+  document.getElementById('kpi-novos').textContent = fmtInt(RS_RECORRENCIA.novos);
+  document.getElementById('kpi-inativos').textContent = fmtInt(RS_RECORRENCIA.inativos);
+  document.getElementById('kpi-taxa-recorrencia').textContent = RS_RECORRENCIA.taxa_recorrencia + '%';
 
-  var li = RS_LAST_IDX;
-  document.getElementById('kpi-bruto').textContent = fmtBRL(RS_BRUTO[li]);
-  document.getElementById('kpi-bruto-sub').textContent = RS_LABELS[li];
-  document.getElementById('kpi-liquido').textContent = fmtBRL(RS_LIQUIDO[li]);
-  document.getElementById('kpi-repasse').textContent = fmtBRL(RS_REPASSE[li]);
-  document.getElementById('kpi-volume').textContent = fmtInt(RS_VOL[li]);
-  document.getElementById('kpi-volume-sub').textContent = RS_LABELS[li];
-  document.getElementById('kpi-ticket').textContent = RS_VOL[li] ? fmtBRL(RS_BRUTO[li]/RS_VOL[li]) : '—';
+  // Filtro de mes: só meses com dado (Volume > 0) entram na lista, default = ultimo
+  var mesSelect = document.getElementById('mes-filter');
+  RS_LABELS.forEach(function(lbl, i){
+    if (RS_VOL[i] > 0 || i === RS_LAST_IDX) {
+      var opt = document.createElement('option');
+      opt.value = i; opt.textContent = lbl;
+      if (i === RS_LAST_IDX) opt.selected = true;
+      mesSelect.appendChild(opt);
+    }
+  });
+  mesSelect.addEventListener('change', function(){ renderMes(parseInt(this.value, 10)); });
 
-  // Tabs
-  document.querySelectorAll('.tab').forEach(function(t){
+  // Sub-navegacao (Visao Geral / Clientes dentro da mesma aba)
+  document.querySelectorAll('.subtab').forEach(function(t){
     t.addEventListener('click', function(){
-      document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('active'); });
-      document.querySelectorAll('.tabpanel').forEach(function(x){ x.classList.remove('active'); });
+      document.querySelectorAll('.subtab').forEach(function(x){ x.classList.remove('active'); });
+      document.querySelectorAll('.subpanel').forEach(function(x){ x.classList.remove('active'); });
       t.classList.add('active');
-      document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+      document.getElementById('sub-' + t.dataset.sub).classList.add('active');
     });
   });
 
-  // Chart 1: evolucao mensal
+  // Chart evolucao mensal (fixo, mostra o periodo inteiro sempre)
   var css = getComputedStyle(document.documentElement);
-  new Chart(document.getElementById('chartEvol'), {
+  chartEvolInstance = new Chart(document.getElementById('chartEvol'), {
     type: 'bar',
     data: {
       labels: RS_LABELS,
@@ -275,11 +329,34 @@ function initApp(){
       plugins:{ legend:{ labels:{ color: css.getPropertyValue('--text').trim() } } } }
   });
 
-  // Chart 2: volume por programa no ultimo mes
-  var progData = RS_PROG_BREAKDOWN[RS_LABELS[li]] || {};
+  renderMes(RS_LAST_IDX);
+  renderClients('', '');
+  document.getElementById('client-search').addEventListener('input', function(e){
+    renderClients(e.target.value, document.getElementById('status-filter').value);
+  });
+  document.getElementById('status-filter').addEventListener('change', function(e){
+    renderClients(document.getElementById('client-search').value, e.target.value);
+  });
+}
+
+function renderMes(idx){
+  var lbl = RS_LABELS[idx];
+  document.getElementById('kpi-bruto').textContent = fmtBRL(RS_BRUTO[idx]);
+  document.getElementById('kpi-bruto-sub').textContent = lbl;
+  document.getElementById('kpi-liquido').textContent = fmtBRL(RS_LIQUIDO[idx]);
+  document.getElementById('kpi-repasse').textContent = fmtBRL(RS_REPASSE[idx]);
+  document.getElementById('kpi-volume').textContent = fmtInt(RS_VOL[idx]);
+  document.getElementById('kpi-volume-sub').textContent = lbl;
+  document.getElementById('kpi-ticket').textContent = RS_VOL[idx] ? fmtBRL(RS_BRUTO[idx]/RS_VOL[idx]) : '—';
+
+  var progData = RS_PROG_BREAKDOWN[lbl] || {};
   var progLabels = Object.keys(progData);
   var progVols = progLabels.map(function(k){ return progData[k].vol; });
-  new Chart(document.getElementById('chartProg'), {
+  var css = getComputedStyle(document.documentElement);
+
+  document.getElementById('chartprog-mes-label').textContent = lbl;
+  if (chartProgInstance) chartProgInstance.destroy();
+  chartProgInstance = new Chart(document.getElementById('chartProg'), {
     type: 'doughnut',
     data: {
       labels: progLabels,
@@ -292,9 +369,12 @@ function initApp(){
       plugins:{ legend:{ position:'bottom', labels:{ color: css.getPropertyValue('--text').trim() } } } }
   });
 
-  // Tabela detalhamento por programa
-  document.getElementById('prog-mes-label').textContent = RS_LABELS[li];
+  document.getElementById('prog-mes-label').textContent = lbl;
   var tbody = document.getElementById('prog-table-body');
+  tbody.innerHTML = '';
+  if (!progLabels.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="muted">Sem dados para este mês.</td></tr>';
+  }
   Object.keys(progData).sort(function(a,b){ return progData[b].bruto - progData[a].bruto; }).forEach(function(prog){
     var d = progData[prog];
     var tr = document.createElement('tr');
@@ -306,29 +386,30 @@ function initApp(){
       '<td class="num">' + fmtBRL(d.repasse) + '</td>';
     tbody.appendChild(tr);
   });
+}
 
-  // Tabela clientes
-  function renderClients(filter){
-    var body = document.getElementById('client-table-body');
-    body.innerHTML = '';
-    var f = (filter || '').toLowerCase();
-    var shown = 0;
-    RS_CLIENTES.forEach(function(c){
-      if (f && c.nome.toLowerCase().indexOf(f) === -1) return;
-      shown++;
-      var tr = document.createElement('tr');
-      tr.innerHTML = '<td>' + c.nome + '</td>' +
-        '<td>' + c.cpf_masked + '</td>' +
-        '<td><span class="tag">' + c.programa_atual + '</span></td>' +
-        '<td class="num">' + fmtInt(c.qtd_pagamentos) + '</td>' +
-        '<td class="num">' + fmtBRL(c.total_pago) + '</td>' +
-        '<td>' + c.ultimo_mes + '</td>';
-      body.appendChild(tr);
-    });
-    document.getElementById('client-count').textContent = shown + ' de ' + RS_CLIENTES.length + ' clientes';
-  }
-  renderClients('');
-  document.getElementById('client-search').addEventListener('input', function(e){ renderClients(e.target.value); });
+function renderClients(nameFilter, statusFilter){
+  var body = document.getElementById('client-table-body');
+  body.innerHTML = '';
+  var f = (nameFilter || '').toLowerCase();
+  var shown = 0;
+  RS_CLIENTES.forEach(function(c){
+    if (f && c.nome.toLowerCase().indexOf(f) === -1) return;
+    if (statusFilter && c.status !== statusFilter) return;
+    shown++;
+    var statusCls = 'status-' + c.status.toLowerCase();
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + c.nome + '</td>' +
+      '<td>' + c.cpf_masked + '</td>' +
+      '<td><span class="tag">' + c.programa_atual + '</span></td>' +
+      '<td><span class="tag ' + statusCls + '">' + c.status + '</span></td>' +
+      '<td class="num">' + fmtInt(c.qtd_meses) + '</td>' +
+      '<td class="num">' + fmtInt(c.streak) + '</td>' +
+      '<td class="num">' + fmtBRL(c.total_pago) + '</td>' +
+      '<td>' + c.ultimo_mes + '</td>';
+    body.appendChild(tr);
+  });
+  document.getElementById('client-count').textContent = shown + ' de ' + RS_CLIENTES.length + ' clientes';
 }
 </script>
 
