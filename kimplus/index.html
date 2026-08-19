@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KIM+ — Painel</title>
+<title>KIM+ — Rede+Saúde</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
 <style>
   :root {
     --bg: #0f1117; --card: #1a1d27; --card2: #20243a; --border: #2a2f45;
@@ -11,43 +12,67 @@
     --accent4: #10b981; --text: #e2e8f0; --muted: #94a3b8; --danger: #f87171;
   }
   * { box-sizing: border-box; }
-  body {
-    background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif;
-    min-height: 100vh; margin: 0;
-  }
-  #auth-overlay {
-    position: fixed; inset: 0; z-index: 999; background: var(--bg);
-    display: flex; align-items: center; justify-content: center;
-  }
-  .box {
-    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-    padding: 36px 32px; width: 320px; text-align: center;
-  }
-  .logo {
-    width: 48px; height: 48px; margin: 0 auto 16px; border-radius: 12px;
-    background: linear-gradient(135deg, var(--accent2), var(--accent));
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 800; font-size: 18px; color: white;
-  }
-  h2 { margin: 0 0 4px; font-size: 18px; }
-  p.sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
-  input {
-    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--card2); color: var(--text); font-size: 14px; margin-bottom: 10px;
-  }
-  button {
-    width: 100%; padding: 10px; border-radius: 8px; border: none; cursor: pointer;
-    background: var(--accent); color: white; font-weight: 600; font-size: 14px;
-  }
-  button:hover { background: var(--accent2); }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; margin: 0; }
+
+  /* ── Auth overlay ── */
+  #auth-overlay { position: fixed; inset: 0; z-index: 999; background: var(--bg); display: flex; align-items: center; justify-content: center; }
+  .box { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 36px 32px; width: 320px; text-align: center; }
+  .box .logo { width: 48px; height: 48px; margin: 0 auto 16px; border-radius: 12px; background: linear-gradient(135deg, var(--accent2), var(--accent)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: white; }
+  .box h2 { margin: 0 0 4px; font-size: 18px; }
+  .box p.sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  .box input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card2); color: var(--text); font-size: 14px; margin-bottom: 10px; }
+  .box button { width: 100%; padding: 10px; border-radius: 8px; border: none; cursor: pointer; background: var(--accent); color: white; font-weight: 600; font-size: 14px; }
+  .box button:hover { background: var(--accent2); }
   #auth-error { color: var(--danger); font-size: 12px; min-height: 16px; margin-bottom: 8px; }
   a.back { display: inline-block; margin-top: 16px; font-size: 12px; color: var(--muted); text-decoration: none; }
   a.back:hover { color: var(--text); }
 
-  #content { display: none; padding: 60px 24px; text-align: center; }
-  #content .logo { width: 64px; height: 64px; font-size: 24px; }
-  #content h1 { margin: 20px 0 8px; font-size: 22px; }
-  #content p { color: var(--muted); max-width: 480px; margin: 0 auto; line-height: 1.6; }
+  /* ── App ── */
+  #app { display: none; }
+  .header { background: linear-gradient(135deg,#1a1d27,#20243a); border-bottom:1px solid var(--border); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+  .header-left { display:flex; align-items:center; gap:14px; }
+  .logo { width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:white; }
+  .header h1 { font-size:18px; margin:0; }
+  .header p { color:var(--muted);font-size:13px;margin-top:2px; }
+  .badge { background:var(--accent);color:white;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600; }
+  .gap-badge { background:var(--accent3);color:#1a1200;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600; }
+
+  .tabs { display:flex;gap:4px;padding:16px 32px 0;border-bottom:1px solid var(--border);background:var(--card);overflow-x:auto; }
+  .tab { padding:10px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);border:1px solid transparent;border-bottom:none;transition:all .2s;white-space:nowrap; }
+  .tab:hover { color:var(--text);background:var(--card2); }
+  .tab.active { color:var(--accent2);border-color:var(--border);background:var(--bg);font-weight:600; }
+
+  .content { padding: 24px 32px 48px; max-width: 1300px; margin: 0 auto; }
+  .tabpanel { display: none; }
+  .tabpanel.active { display: block; }
+
+  .kpis { display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:24px; }
+  .kpi { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden; }
+  .kpi::before { content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent); }
+  .kpi.green::before { background:var(--accent4); } .kpi.amber::before { background:var(--accent3); }
+  .kpi.cyan::before { background:var(--accent2); }
+  .kpi-label { font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px; }
+  .kpi-val { font-size:24px;font-weight:700; }
+  .kpi-sub { font-size:11px;color:var(--muted);margin-top:3px; }
+
+  .grid2 { display:grid; grid-template-columns: 1.4fr 1fr; gap:20px; margin-bottom:24px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+  .chart-card { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px; }
+  .chart-card h3 { margin:0 0 14px; font-size:15px; }
+  .chart-wrap { position: relative; height: 280px; }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:10px 12px; color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; border-bottom:1px solid var(--border); }
+  td { padding:10px 12px; border-bottom:1px solid var(--border); }
+  tr:hover td { background: var(--card2); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .search-bar { margin-bottom: 14px; }
+  .search-bar input { width:100%; max-width:320px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--card2); color:var(--text); font-size:13px; }
+  .table-card { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;overflow-x:auto; }
+  .table-scroll { max-height: 560px; overflow-y: auto; }
+  .muted { color: var(--muted); }
+  .tag { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; background:var(--card2); color: var(--accent2); }
 </style>
 </head>
 <body>
@@ -64,20 +89,121 @@
   </div>
 </div>
 
-<div id="content">
-  <div class="logo" style="margin:0 auto;">K+</div>
-  <h1>Painel KIM+ em construção</h1>
-  <p>O dashboard do projeto KIM+ ainda está sendo montado — assim que as planilhas de acompanhamento forem enviadas, este espaço passa a mostrar os dados reais, no mesmo padrão do painel Motiva.</p>
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">K+</div>
+      <div>
+        <h1>KIM+ &middot; Rede+Saúde</h1>
+        <p>Comissionamento de planos de saúde</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="badge" id="periodo-badge">—</span>
+      <span class="gap-badge" id="gap-badge" style="display:none;"></span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="rede">Rede+Saúde</div>
+    <div class="tab" data-tab="clientes">Clientes</div>
+  </div>
+
+  <div class="content">
+
+    <div class="tabpanel active" id="tab-rede">
+      <div class="kpis">
+        <div class="kpi">
+          <div class="kpi-label">Faturamento Bruto</div>
+          <div class="kpi-val" id="kpi-bruto">—</div>
+          <div class="kpi-sub" id="kpi-bruto-sub">último mês</div>
+        </div>
+        <div class="kpi cyan">
+          <div class="kpi-label">Faturamento Líquido</div>
+          <div class="kpi-val" id="kpi-liquido">—</div>
+          <div class="kpi-sub">bruto − imposto (10%)</div>
+        </div>
+        <div class="kpi green">
+          <div class="kpi-label">Repasse (nossa comissão)</div>
+          <div class="kpi-val" id="kpi-repasse">—</div>
+          <div class="kpi-sub">líquido − participação RMS</div>
+        </div>
+        <div class="kpi amber">
+          <div class="kpi-label">Volume de Vendas</div>
+          <div class="kpi-val" id="kpi-volume">—</div>
+          <div class="kpi-sub" id="kpi-volume-sub">último mês</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Ticket Médio</div>
+          <div class="kpi-val" id="kpi-ticket">—</div>
+          <div class="kpi-sub">faturamento bruto / volume</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="chart-card">
+          <h3>Evolução mensal — Faturamento Bruto x Repasse</h3>
+          <div class="chart-wrap"><canvas id="chartEvol"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Volume por Programa (último mês)</h3>
+          <div class="chart-wrap"><canvas id="chartProg"></canvas></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <h3 style="margin:0 0 14px;font-size:15px;">Detalhamento por Programa — <span id="prog-mes-label"></span></h3>
+        <table>
+          <thead><tr>
+            <th>Programa</th><th class="num">Volume</th><th class="num">Faturamento Bruto</th>
+            <th class="num">Faturamento Líquido</th><th class="num">Participação RMS</th><th class="num">Repasse</th>
+          </tr></thead>
+          <tbody id="prog-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tabpanel" id="tab-clientes">
+      <div class="search-bar">
+        <input id="client-search" type="text" placeholder="Buscar por nome...">
+      </div>
+      <div class="table-card">
+        <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Nome</th><th>CPF</th><th>Programa Atual</th><th class="num">Pagamentos</th>
+            <th class="num">Total Pago</th><th>Último Mês</th>
+          </tr></thead>
+          <tbody id="client-table-body"></tbody>
+        </table>
+        </div>
+        <p class="muted" style="margin-top:10px;font-size:12px;">CPF exibido parcialmente mascarado por privacidade. <span id="client-count"></span></p>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <script>
+/* RS_DATA_START */
+const RS_LABELS=["Ago/25"];
+const RS_VOL=[0];
+const RS_BRUTO=[0];
+const RS_LIQUIDO=[0];
+const RS_PARTICIPACAO=[0];
+const RS_REPASSE=[0];
+const RS_PROG_BREAKDOWN={};
+const RS_CLIENTES=[];
+const RS_LAST_IDX=0;
+const RS_GAPS=[];
+/* RS_DATA_END */
+
 var SENHA_KIM = 'KimPlus@2026';
 var AUTH_KEY = 'kimplus_auth';
 
 (function(){
   if (sessionStorage.getItem(AUTH_KEY) === '1') {
-    document.getElementById('auth-overlay').style.display = 'none';
-    document.getElementById('content').style.display = 'block';
+    showApp();
   } else {
     document.getElementById('auth-input').focus();
   }
@@ -87,11 +213,122 @@ function checkAuth(){
   var v = document.getElementById('auth-input').value;
   if (v === SENHA_KIM) {
     sessionStorage.setItem(AUTH_KEY, '1');
-    document.getElementById('auth-overlay').style.display = 'none';
-    document.getElementById('content').style.display = 'block';
+    showApp();
   } else {
     document.getElementById('auth-error').textContent = 'Senha incorreta.';
   }
+}
+
+function showApp(){
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.addEventListener('DOMContentLoaded', initApp);
+  if (document.readyState !== 'loading') initApp();
+}
+
+var _appInited = false;
+function initApp(){
+  if (_appInited) return;
+  _appInited = true;
+
+  document.getElementById('periodo-badge').textContent = RS_LABELS[0] + ' – ' + RS_LABELS[RS_LABELS.length-1];
+  if (RS_GAPS.length) {
+    var gb = document.getElementById('gap-badge');
+    gb.style.display = 'inline-block';
+    gb.textContent = '⚠ sem dado: ' + RS_GAPS.join(', ');
+  }
+
+  var fmtBRL = function(v){ return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); };
+  var fmtInt = function(v){ return Number(v).toLocaleString('pt-BR'); };
+
+  var li = RS_LAST_IDX;
+  document.getElementById('kpi-bruto').textContent = fmtBRL(RS_BRUTO[li]);
+  document.getElementById('kpi-bruto-sub').textContent = RS_LABELS[li];
+  document.getElementById('kpi-liquido').textContent = fmtBRL(RS_LIQUIDO[li]);
+  document.getElementById('kpi-repasse').textContent = fmtBRL(RS_REPASSE[li]);
+  document.getElementById('kpi-volume').textContent = fmtInt(RS_VOL[li]);
+  document.getElementById('kpi-volume-sub').textContent = RS_LABELS[li];
+  document.getElementById('kpi-ticket').textContent = RS_VOL[li] ? fmtBRL(RS_BRUTO[li]/RS_VOL[li]) : '—';
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('active'); });
+      document.querySelectorAll('.tabpanel').forEach(function(x){ x.classList.remove('active'); });
+      t.classList.add('active');
+      document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Chart 1: evolucao mensal
+  var css = getComputedStyle(document.documentElement);
+  new Chart(document.getElementById('chartEvol'), {
+    type: 'bar',
+    data: {
+      labels: RS_LABELS,
+      datasets: [
+        { label: 'Faturamento Bruto', data: RS_BRUTO, backgroundColor: css.getPropertyValue('--accent').trim() },
+        { label: 'Repasse (comissão)', data: RS_REPASSE, backgroundColor: css.getPropertyValue('--accent2').trim() }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } },
+      plugins:{ legend:{ labels:{ color: css.getPropertyValue('--text').trim() } } } }
+  });
+
+  // Chart 2: volume por programa no ultimo mes
+  var progData = RS_PROG_BREAKDOWN[RS_LABELS[li]] || {};
+  var progLabels = Object.keys(progData);
+  var progVols = progLabels.map(function(k){ return progData[k].vol; });
+  new Chart(document.getElementById('chartProg'), {
+    type: 'doughnut',
+    data: {
+      labels: progLabels,
+      datasets: [{ data: progVols, backgroundColor: [
+        css.getPropertyValue('--accent').trim(), css.getPropertyValue('--accent2').trim(),
+        css.getPropertyValue('--accent3').trim(), css.getPropertyValue('--accent4').trim()
+      ]}]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ color: css.getPropertyValue('--text').trim() } } } }
+  });
+
+  // Tabela detalhamento por programa
+  document.getElementById('prog-mes-label').textContent = RS_LABELS[li];
+  var tbody = document.getElementById('prog-table-body');
+  Object.keys(progData).sort(function(a,b){ return progData[b].bruto - progData[a].bruto; }).forEach(function(prog){
+    var d = progData[prog];
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + prog + '</td>' +
+      '<td class="num">' + fmtInt(d.vol) + '</td>' +
+      '<td class="num">' + fmtBRL(d.bruto) + '</td>' +
+      '<td class="num">' + fmtBRL(d.liquido) + '</td>' +
+      '<td class="num">' + fmtBRL(d.participacao) + '</td>' +
+      '<td class="num">' + fmtBRL(d.repasse) + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  // Tabela clientes
+  function renderClients(filter){
+    var body = document.getElementById('client-table-body');
+    body.innerHTML = '';
+    var f = (filter || '').toLowerCase();
+    var shown = 0;
+    RS_CLIENTES.forEach(function(c){
+      if (f && c.nome.toLowerCase().indexOf(f) === -1) return;
+      shown++;
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + c.nome + '</td>' +
+        '<td>' + c.cpf_masked + '</td>' +
+        '<td><span class="tag">' + c.programa_atual + '</span></td>' +
+        '<td class="num">' + fmtInt(c.qtd_pagamentos) + '</td>' +
+        '<td class="num">' + fmtBRL(c.total_pago) + '</td>' +
+        '<td>' + c.ultimo_mes + '</td>';
+      body.appendChild(tr);
+    });
+    document.getElementById('client-count').textContent = shown + ' de ' + RS_CLIENTES.length + ' clientes';
+  }
+  renderClients('');
+  document.getElementById('client-search').addEventListener('input', function(e){ renderClients(e.target.value); });
 }
 </script>
 
