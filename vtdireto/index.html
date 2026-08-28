@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard VTDIRETO Motiva</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1a1d27; --card2: #20243a; --border: #2a2f45;
+    --accent: #5b6af0; --accent2: #22d3ee; --accent3: #f59e0b;
+    --accent4: #10b981; --text: #e2e8f0; --muted: #94a3b8; --danger: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+  .header { background: linear-gradient(135deg,#1a1d27,#20243a); border-bottom:1px solid var(--border); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+  .header-left { display:flex; align-items:center; gap:16px; }
+  .logo { width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:white; }
+  .header h1 { font-size:20px;font-weight:700; }
+  .header p { color:var(--muted);font-size:13px;margin-top:2px; }
+  .badge { background:var(--accent);color:white;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600; }
+  .tabs { display:flex;gap:4px;padding:16px 32px 0;border-bottom:1px solid var(--border);background:var(--card);overflow-x:auto; }
+  .tab { padding:10px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);border:1px solid transparent;border-bottom:none;transition:all .2s;white-space:nowrap; }
+  .tab:hover { color:var(--text);background:var(--card2); }
+  .tab.active { color:var(--accent2);border-color:var(--border);background:var(--bg);font-weight:600; }
+  .content { padding:24px 32px;display:none; }
+  .content.active { display:block; }
+  .kpi-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px;margin-bottom:24px; }
+  .kpi { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden; }
+  .kpi::before { content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent); }
+  .kpi.green::before { background:var(--accent4); } .kpi.amber::before { background:var(--accent3); }
+  .kpi.red::before { background:var(--danger); } .kpi.cyan::before { background:var(--accent2); }
+  .kpi.purple::before { background:#a78bfa; }
+  .kpi-label { font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px; }
+  .kpi-value { font-size:22px;font-weight:700; }
+  .kpi-sub { font-size:11px;color:var(--muted);margin-top:3px; }
+  .chart-grid { display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px; }
+  .chart-grid.full { grid-template-columns:1fr; }
+  .chart-card { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px; }
+  .chart-card h3 { font-size:14px;font-weight:600;margin-bottom:14px;color:var(--text); }
+  .chart-card .chart-sub { font-size:11px;color:var(--muted);margin-bottom:10px;margin-top:-10px; }
+  .chart-wrap { position:relative;height:280px; }
+  .filter-bar { display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px; }
+  .filter-bar label { font-size:12px;color:var(--muted);font-weight:500; }
+  select, .search-input { background:var(--card2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:7px;font-size:12px;cursor:pointer;outline:none; }
+  select:focus, .search-input:focus { border-color:var(--accent); }
+  .search-input { cursor:text; width:240px; }
+  .filter-btn { background:var(--card2);border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:7px;font-size:11px;cursor:pointer;transition:all .15s; }
+  .filter-btn:hover { color:var(--text);border-color:var(--accent); }
+  .filter-btn.active-btn { color:var(--accent2); border-color:var(--accent2); }
+  .table-card { background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px; }
+  .table-card h3 { font-size:14px;font-weight:600;padding:14px 18px;border-bottom:1px solid var(--border); }
+  table { width:100%;border-collapse:collapse; }
+  th { text-align:left;padding:9px 14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--card2);font-weight:500; }
+  td { padding:9px 14px;font-size:12px;border-top:1px solid var(--border); }
+  tr:hover td { background:rgba(255,255,255,.02); }
+  .pill { display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600; }
+  .pill.ativo { background:rgba(16,185,129,.2);color:#34d399; }
+  .pill.risco { background:rgba(245,158,11,.2);color:#fbbf24; }
+  .pill.inativo { background:rgba(248,113,113,.2);color:#f87171; }
+  .pill.ativorisco { background:linear-gradient(90deg,rgba(16,185,129,.2),rgba(245,158,11,.2));color:#fde68a; }
+  .table-scroll { overflow-x:auto; max-height:560px; overflow-y:auto; }
+  .info-note { background:rgba(91,106,240,.08);border:1px solid rgba(91,106,240,.25);border-radius:8px;padding:9px 13px;font-size:11px;color:var(--muted);margin-bottom:14px; }
+  .info-note strong { color:var(--accent2); }
+  .footer-note { color:var(--muted);font-size:11px;text-align:center;padding:18px; }
+  @media(max-width:768px){ .chart-grid{grid-template-columns:1fr;} .header,.content{padding:16px;} .tabs{padding:12px 16px 0;} .kpi-grid{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+<div id="auth-overlay" style="position:fixed;inset:0;z-index:99999;background:#0f172a;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;">
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:40px 48px;width:100%;max-width:400px;text-align:center;box-shadow:0 25px 50px rgba(0,0,0,.5);">
+    <div style="font-size:36px;margin-bottom:8px;">&#128202;</div>
+    <h1 style="color:#f1f5f9;font-size:22px;font-weight:700;margin:0 0 4px">VTDIRETO Motiva</h1>
+    <p style="color:#64748b;font-size:13px;margin:0 0 28px">KIM+ BI &mdash; Acesso restrito</p>
+    <div style="position:relative;margin-bottom:12px;">
+      <input id="auth-input" type="password" placeholder="Digite a senha"
+        style="width:100%;box-sizing:border-box;padding:12px 44px 12px 16px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:15px;outline:none;"
+        onkeydown="if(event.key==='Enter')checkAuth()"
+        onfocus="this.style.borderColor='#3b82f6'"
+        onblur="this.style.borderColor='#334155'" />
+      <span id="eye-btn" onclick="togglePwd()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none;">&#128065;&#65039;</span>
+    </div>
+    <div id="auth-error" style="color:#f87171;font-size:13px;margin-bottom:12px;min-height:18px;"></div>
+    <button onclick="checkAuth()"
+      style="width:100%;padding:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s;"
+      onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+      Entrar
+    </button>
+  </div>
+</div>
+<script>
+var SENHA_VT = 'VTDireto2026';
+var AUTH_KEY = 'vtdireto_auth';
+(function(){
+  if(sessionStorage.getItem(AUTH_KEY)==='1'){
+    document.getElementById('auth-overlay').style.display='none';
+  }
+  setTimeout(function(){ var el=document.getElementById('auth-input'); if(el)el.focus(); },100);
+})();
+function checkAuth(){
+  var val=document.getElementById('auth-input').value.trim();
+  var err=document.getElementById('auth-error');
+  if(val===SENHA_VT){
+    sessionStorage.setItem(AUTH_KEY,'1');
+    document.getElementById('auth-overlay').style.display='none';
+    err.textContent='';
+  } else {
+    err.textContent='Senha incorreta. Tente novamente.';
+    document.getElementById('auth-input').value='';
+    document.getElementById('auth-input').focus();
+  }
+}
+function togglePwd(){
+  var inp=document.getElementById('auth-input');
+  var eye=document.getElementById('eye-btn');
+  if(inp.type==='password'){inp.type='text';eye.textContent='\u{1F648}';}
+  else{inp.type='password';eye.textContent='\u{1F441}\u{FE0F}';}
+}
+</script>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">VT</div>
+    <div><h1>VTDIRETO Motiva</h1><p>Dashboard Financeiro &middot; GMV / Casco / Taxa de Serviço</p></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <span class="badge" id="badge-gerado">Atualizado em 28/08/2026</span>
+  </div>
+</div>
+<div class="tabs">
+  <div class="tab active" onclick="showTab('gmv',event)">📊 GMV</div>
+  <div class="tab" onclick="showTab('receita',event)">💰 Receita</div>
+  <div class="tab" onclick="showTab('clientes',event)">👥 Clientes</div>
+</div>
+
+<!-- ===== GMV ===== -->
+<div class="content active" id="tab-gmv">
+  <div class="info-note">ℹ️ <strong>Regra de GMV:</strong> Pedidos Itaú (prefixo "B") entram no GMV quando Valor Pedido − Vr. Pago ≤ 0; caso contrário, o valor vira Taxa de Serviço. Pedidos com prefixo "P" são Receita de Casco.</div>
+  <div class="kpi-grid" id="gmv-kpis"></div>
+  <div class="chart-grid full"><div class="chart-card"><h3>GMV Mensal</h3><p class="chart-sub">Evolução mês a mês em R$</p><div class="chart-wrap"><canvas id="gmvLineChart"></canvas></div></div></div>
+  <div class="table-card"><h3>📋 Detalhe Mensal — GMV / Casco / Taxa</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th>GMV</th><th>Casco</th><th>Taxa</th><th>Total</th></tr></thead><tbody id="gmvTbody"></tbody></table></div></div>
+</div>
+
+<!-- ===== RECEITA ===== -->
+<div class="content" id="tab-receita">
+  <div class="info-note">ℹ️ <strong>Receita</strong> aqui = Taxa de Serviço (linhas Itaú com Valor Pedido − Vr. Pago &gt; 0). Take Rate = Taxa ÷ GMV.</div>
+  <div class="kpi-grid" id="rec-kpis"></div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>Taxa de Serviço — Evolução Mensal</h3><p class="chart-sub">Em R$</p><div class="chart-wrap"><canvas id="taxaLineChart"></canvas></div></div>
+    <div class="chart-card"><h3>Take Rate (%)</h3><p class="chart-sub">Taxa ÷ GMV por mês</p><div class="chart-wrap"><canvas id="takeRateChart"></canvas></div></div>
+  </div>
+  <div class="table-card"><h3>📋 Detalhe Mensal — Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th>Taxa (Receita)</th><th>GMV</th><th>Take Rate</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
+</div>
+
+<!-- ===== CLIENTES ===== -->
+<div class="content" id="tab-clientes">
+  <div class="kpi-grid" id="cli-kpis"></div>
+  <div class="filter-bar">
+    <label>🔍 Buscar:</label>
+    <input type="text" class="search-input" id="cliSearch" placeholder="Código ou nome..." oninput="renderClientes()">
+    <button class="filter-btn" id="btn-todos" onclick="setCliFiltro('todos')">Todos</button>
+    <button class="filter-btn" id="btn-ativo" onclick="setCliFiltro('ativo')">Ativo</button>
+    <button class="filter-btn" id="btn-risco" onclick="setCliFiltro('risco')">Em Risco</button>
+    <button class="filter-btn" id="btn-inativo" onclick="setCliFiltro('inativo')">Inativo</button>
+    <button class="filter-btn" onclick="exportClientesCSV()" style="margin-left:auto;">⬇ Exportar CSV</button>
+  </div>
+  <div class="table-card">
+    <div class="table-scroll"><table>
+      <thead><tr><th>Código</th><th>Nome</th><th>Última Compra</th><th>Dias sem comprar</th><th>Status</th><th>GMV (período)</th><th>Casco (período)</th><th>Taxa (período)</th></tr></thead>
+      <tbody id="cliTbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="footer-note">VTDIRETO Motiva &middot; dados gerados em 28/08/2026 &middot; fonte: planilhas mensais (NLA)</div>
+
+<script>
+const VT_MONTHS = ["Jan/26", "Fev/26", "Mar/26", "Abr/26", "Mai/26", "Jun/26", "Jul/26"];
+const VT_GMV = [127976.86, 454807.46, 313486.52, 318963.72, 340663.68, 337260.33, 385694.84];
+const VT_CASCO = [21066.8, 5527.11, 12026.05, 7206.4, 10030.59, 6123.71, 7057.55];
+const VT_TAXA = [10204.31, 10312.54, 10936.5, 10631.3, 10824.03, 11410.48, 11187.48];
+const VT_TOTAL = [159247.97, 470647.11, 336449.07, 336801.42, 361518.3, 354794.52, 403939.87];
+const VT_TAKE_RATE = [7.97, 2.27, 3.49, 3.33, 3.18, 3.38, 2.9];
+const VT_CLIENTES = [{"cod": "T-1170", "nome": "VAREJAO DAS TINTAS", "last": "2026-07-31", "gmv": 2624.0, "casco": 268.27, "taxa": 209.1}, {"cod": "T-1386", "nome": "DROGARIAS ULTRA POPULAR", "last": "2026-07-31", "gmv": 994.0, "casco": 0.0, "taxa": 130.5}, {"cod": "T-1419", "nome": "MANUMINAS", "last": "2026-07-31", "gmv": 384.0, "casco": 0.0, "taxa": 80.08}, {"cod": "T-1491", "nome": "CONAP", "last": "2026-07-31", "gmv": 752.0, "casco": 0.0, "taxa": 120.76}, {"cod": "T-1546", "nome": "PILAR SUPERMERCADO", "last": "2026-07-31", "gmv": 2683.0, "casco": 69.57, "taxa": 211.49}, {"cod": "T-1632", "nome": "GARCIA SERVIÇOS LTDA", "last": "2026-07-31", "gmv": 2569.69, "casco": 29.83, "taxa": 218.95}, {"cod": "T-1861", "nome": "TESTATO SERVICOS TECNICOS LTDA", "last": "2026-07-31", "gmv": 2762.0, "casco": 39.74, "taxa": 220.77}, {"cod": "T-1917", "nome": "ENERGOLD PERFURAÇOES LTDA", "last": "2026-07-31", "gmv": 3240.0, "casco": 129.18, "taxa": 246.84}, {"cod": "T-1989", "nome": "GRUPO ACTA", "last": "2026-07-31", "gmv": 320.0, "casco": 39.74, "taxa": 51.65}, {"cod": "T-1990", "nome": "VIA NOVA SERVICOS LTDA", "last": "2026-07-31", "gmv": 266.16, "casco": 19.87, "taxa": 75.24}, {"cod": "T-2047", "nome": "DROGARIAS PACHECO S/A", "last": "2026-07-31", "gmv": 0.0, "casco": 29.83, "taxa": 0.0}, {"cod": "T-2144", "nome": "COMERCIAL DE ENSINO E SERVIÇOS", "last": "2026-07-31", "gmv": 4260.0, "casco": 59.61, "taxa": 275.04}, {"cod": "T-2181", "nome": "CARTORIO DO 1º OFICIO", "last": "2026-07-31", "gmv": 980.0, "casco": 0.0, "taxa": 126.04}, {"cod": "T-2209", "nome": "ARTE ALEGRIA", "last": "2026-07-31", "gmv": 4278.0, "casco": 0.0, "taxa": 275.77}, {"cod": "T-2217", "nome": "AR PACK", "last": "2026-07-31", "gmv": 608.0, "casco": 19.87, "taxa": 114.95}, {"cod": "T-2220", "nome": "CONSERVADORA MINEIRA II LTDA", "last": "2026-07-31", "gmv": 1160.0, "casco": 0.0, "taxa": 155.6}, {"cod": "T-2256", "nome": "DOT GESTAO III ADMNISTRATIVA L", "last": "2026-07-31", "gmv": 332.0, "casco": 19.87, "taxa": 65.07}, {"cod": "T-2265", "nome": "VERZANI E SANDRINI S.A.", "last": "2026-07-31", "gmv": 1100.0, "casco": 139.09, "taxa": 93.11}, {"cod": "T-2266", "nome": "PORTO CONVENIENCIA LTDA", "last": "2026-07-31", "gmv": 684.0, "casco": 119.22, "taxa": 79.25}, {"cod": "T-2272", "nome": "GTS TRANSPORTES", "last": "2026-07-31", "gmv": 120.0, "casco": 19.87, "taxa": 29.76}, {"cod": "T-267", "nome": "MUNICIPIO DE NOVA LIMA", "last": "2026-07-31", "gmv": 228826.0, "casco": 3508.43, "taxa": 9340.38}, {"cod": "T-563", "nome": "HOSPITAL VILA DA SERRA", "last": "2026-07-31", "gmv": 15582.0, "casco": 486.89, "taxa": 795.91}, {"cod": "T-584", "nome": "BHCOOP", "last": "2026-07-31", "gmv": 268.0, "casco": 0.0, "taxa": 88.33}, {"cod": "T-586", "nome": "KRUG BIER", "last": "2026-07-31", "gmv": 1796.0, "casco": 29.83, "taxa": 175.74}, {"cod": "T-852", "nome": "APAC", "last": "2026-07-31", "gmv": 2154.0, "casco": 59.66, "taxa": 239.89}, {"cod": "T-905", "nome": "LIARTH", "last": "2026-07-31", "gmv": 2006.0, "casco": 109.31, "taxa": 222.96}, {"cod": "T-1073", "nome": "LENARGE", "last": "2026-07-30", "gmv": 8180.0, "casco": 238.64, "taxa": 458.84}, {"cod": "T-1315", "nome": "VIKINGS SIST. DE LIMPEZA LTDA.", "last": "2026-07-30", "gmv": 8895.24, "casco": 337.89, "taxa": 538.52}, {"cod": "T-1634", "nome": "PROSPECSOLOS", "last": "2026-07-30", "gmv": 2476.0, "casco": 29.83, "taxa": 197.05}, {"cod": "T-1758", "nome": "GEOANALABS", "last": "2026-07-30", "gmv": 912.0, "casco": 19.87, "taxa": 123.37}, {"cod": "T-1843", "nome": "DO LASER VILA DA  SERRA", "last": "2026-07-30", "gmv": 650.0, "casco": 0.0, "taxa": 113.15}, {"cod": "T-1872", "nome": "CONCRETO HOLDING SERVIÇOS S.A", "last": "2026-07-30", "gmv": 192.0, "casco": 0.0, "taxa": 33.58}, {"cod": "T-1910", "nome": "EA MULTISERVICOS", "last": "2026-07-30", "gmv": 350.0, "casco": 119.32, "taxa": 111.98}, {"cod": "T-2079", "nome": "MW SOFTWARE", "last": "2026-07-30", "gmv": 705.0, "casco": 0.0, "taxa": 115.28}, {"cod": "T-2085", "nome": "TOCA DO LEAO", "last": "2026-07-30", "gmv": 552.0, "casco": 69.57, "taxa": 99.77}, {"cod": "T-2205", "nome": "CONSERVADORA CAMPOS E SERVIÇOS", "last": "2026-07-30", "gmv": 2392.0, "casco": 69.57, "taxa": 193.77}, {"cod": "T-2268", "nome": "SELBETTI - MATRIZ", "last": "2026-07-30", "gmv": 176.0, "casco": 19.87, "taxa": 32.94}, {"cod": "T-2271", "nome": "PWL EVENTOS LTDA", "last": "2026-07-30", "gmv": 318.0, "casco": 79.48, "taxa": 38.66}, {"cod": "T-2274", "nome": "IGREJA BATISTA CENTRAL DE BELO", "last": "2026-07-30", "gmv": 68.0, "casco": 19.87, "taxa": 27.72}, {"cod": "T-2278", "nome": "RMBH CONSÓRCIO MG", "last": "2026-07-30", "gmv": 800.0, "casco": 79.48, "taxa": 45.16}, {"cod": "T-2284", "nome": "COMINA CONSERVADORA MINEIRA LT", "last": "2026-07-30", "gmv": 0.0, "casco": 19.87, "taxa": 0.0}, {"cod": "T-2285", "nome": "HIGRA MINING SERVICE", "last": "2026-07-30", "gmv": 100.0, "casco": 19.87, "taxa": 16.44}, {"cod": "T-270", "nome": "ACINL", "last": "2026-07-30", "gmv": 3436.0, "casco": 149.05, "taxa": 247.11}, {"cod": "T-326", "nome": "COPASA", "last": "2026-07-30", "gmv": 4120.0, "casco": 59.66, "taxa": 256.49}, {"cod": "T-390", "nome": "ENALTER", "last": "2026-07-30", "gmv": 488.0, "casco": 0.0, "taxa": 97.2}, {"cod": "T-449", "nome": "LAR DOS IDOSOS", "last": "2026-07-30", "gmv": 3411.0, "casco": 69.57, "taxa": 279.58}, {"cod": "T-585", "nome": "ARSERVICE INSTALAÇÕES LTDA", "last": "2026-07-30", "gmv": 1772.0, "casco": 79.53, "taxa": 200.63}, {"cod": "T-688", "nome": "REAL GUINDASTES", "last": "2026-07-30", "gmv": 10810.0, "casco": 427.53, "taxa": 616.51}, {"cod": "T-830", "nome": "RGTECH", "last": "2026-07-30", "gmv": 1348.0, "casco": 19.87, "taxa": 157.68}, {"cod": "T-1144", "nome": "BIOSUT", "last": "2026-07-29", "gmv": 3674.0, "casco": 0.0, "taxa": 251.41}, {"cod": "T-1205", "nome": "MORRO DO CHAPEU GOLFE CLUBE", "last": "2026-07-29", "gmv": 1716.0, "casco": 0.0, "taxa": 172.53}, {"cod": "T-1267", "nome": "CARTÕES DE TODOS", "last": "2026-07-29", "gmv": 1329.08, "casco": 149.05, "taxa": 194.99}, {"cod": "T-1320", "nome": "GEOCONTROLE", "last": "2026-07-29", "gmv": 2272.0, "casco": 218.62, "taxa": 220.77}, {"cod": "T-1331", "nome": "SECRETARIA DE EDUCAÇÃO", "last": "2026-07-29", "gmv": 1061452.15, "casco": 30524.31, "taxa": 0.0}, {"cod": "T-1458", "nome": "COLEGUIUM REDE DE ENSIN", "last": "2026-07-29", "gmv": 6708.0, "casco": 208.66, "taxa": 438.28}, {"cod": "T-1506", "nome": "ATELIER DOS MÁRMORES", "last": "2026-07-29", "gmv": 546.0, "casco": 0.0, "taxa": 99.53}, {"cod": "T-1524", "nome": "INSTITUTO OURO VERDE", "last": "2026-07-29", "gmv": 290.0, "casco": 19.87, "taxa": 63.36}, {"cod": "T-1668", "nome": "RCS SOLUCOES MEDICAS S/A", "last": "2026-07-29", "gmv": 818.0, "casco": 0.0, "taxa": 151.99}, {"cod": "T-1681", "nome": "PETREL", "last": "2026-07-29", "gmv": 1068.0, "casco": 0.0, "taxa": 116.95}, {"cod": "T-1704", "nome": "POSTO PARADA BOA", "last": "2026-07-29", "gmv": 1170.0, "casco": 149.1, "taxa": 124.67}, {"cod": "T-1738", "nome": "RAP10 TELECOM", "last": "2026-07-29", "gmv": 1208.0, "casco": 59.66, "taxa": 152.04}, {"cod": "T-1740", "nome": "DISTRIBUIDORA CUMMINS MINAS LT", "last": "2026-07-29", "gmv": 548.0, "casco": 0.0, "taxa": 112.53}, {"cod": "T-1831", "nome": "BELLA PERFUMES E COSMETICOS", "last": "2026-07-29", "gmv": 426.0, "casco": 0.0, "taxa": 55.93}, {"cod": "T-1850", "nome": "PLANNER ETIQUETAS", "last": "2026-07-29", "gmv": 2060.0, "casco": 59.66, "taxa": 168.28}, {"cod": "T-1851", "nome": "HOSPITAL MATER DEI S/A", "last": "2026-07-29", "gmv": 5425.0, "casco": 59.66, "taxa": 348.93}, {"cod": "T-1908", "nome": "VITACÉLULAS", "last": "2026-07-29", "gmv": 3684.0, "casco": 69.57, "taxa": 264.75}, {"cod": "T-1912", "nome": "CIEC CERVEJARIA ARTESANAL S/A", "last": "2026-07-29", "gmv": 1610.32, "casco": 119.32, "taxa": 194.08}, {"cod": "T-1938", "nome": "PATENTE & GODINHO SEGUROS", "last": "2026-07-29", "gmv": 356.0, "casco": 0.0, "taxa": 104.77}, {"cod": "T-2100", "nome": "ACO SANTA CLARA", "last": "2026-07-29", "gmv": 644.0, "casco": 29.83, "taxa": 112.91}, {"cod": "T-2121", "nome": "DELACQUA  INDUSTRIA E COMERCIO", "last": "2026-07-29", "gmv": 992.0, "casco": 29.83, "taxa": 117.5}, {"cod": "T-2125", "nome": "ALZATA", "last": "2026-07-29", "gmv": 742.0, "casco": 59.61, "taxa": 136.73}, {"cod": "T-2127", "nome": "LIDERBAN", "last": "2026-07-29", "gmv": 2396.0, "casco": 228.53, "taxa": 244.06}, {"cod": "T-2155", "nome": "STUDI VELOCITY", "last": "2026-07-29", "gmv": 296.0, "casco": 0.0, "taxa": 102.37}, {"cod": "T-2168", "nome": "RD SAUDE", "last": "2026-07-29", "gmv": 4478.0, "casco": 119.22, "taxa": 322.59}, {"cod": "T-2173", "nome": "C.A.S.A", "last": "2026-07-29", "gmv": 696.0, "casco": 0.0, "taxa": 114.93}, {"cod": "T-2195", "nome": "WB CONSTRUÇÕES", "last": "2026-07-29", "gmv": 2640.0, "casco": 19.87, "taxa": 248.54}, {"cod": "T-2235", "nome": "AMOR SAUDE", "last": "2026-07-29", "gmv": 507.0, "casco": 0.0, "taxa": 97.35}, {"cod": "T-2279", "nome": "MCO APOIO ADMINISTRATIVO LTDA", "last": "2026-07-29", "gmv": 184.0, "casco": 99.35, "taxa": 33.25}, {"cod": "T-266", "nome": "TACOM PROJETOS BILHETAGEM", "last": "2026-07-29", "gmv": 128.0, "casco": 19.87, "taxa": 0.0}, {"cod": "T-322", "nome": "CAESAR BUSINESS", "last": "2026-07-29", "gmv": 3152.0, "casco": 59.66, "taxa": 269.15}, {"cod": "T-343", "nome": "VALE", "last": "2026-07-29", "gmv": 7424.0, "casco": 149.05, "taxa": 402.56}, {"cod": "T-454", "nome": "CASA E TINTA", "last": "2026-07-29", "gmv": 1764.0, "casco": 29.83, "taxa": 161.53}, {"cod": "T-462", "nome": "EQUILIBRIO FITNESS EIRELI EPP", "last": "2026-07-29", "gmv": 3372.0, "casco": 119.32, "taxa": 265.1}, {"cod": "T-483", "nome": "CAMARA MUNICIPAL DE NOVA LIMA", "last": "2026-07-29", "gmv": 15934.3, "casco": 218.72, "taxa": 723.13}, {"cod": "T-503", "nome": "HOSPITAL FELICIO ROCHO", "last": "2026-07-29", "gmv": 416.0, "casco": 0.0, "taxa": 81.37}, {"cod": "T-538", "nome": "ANJOS DA GUARDA SERVIÇOS LTDA", "last": "2026-07-29", "gmv": 5814.0, "casco": 89.49, "taxa": 290.17}, {"cod": "T-595", "nome": "SANTA CASA DE MISERICORDIA", "last": "2026-07-29", "gmv": 628.0, "casco": 0.0, "taxa": 89.91}, {"cod": "T-679", "nome": "CLICK ILUMINAÇÃO LTDA", "last": "2026-07-29", "gmv": 1384.0, "casco": 0.0, "taxa": 159.15}, {"cod": "T-693", "nome": "CANADA CONTAINERS", "last": "2026-07-29", "gmv": 1600.0, "casco": 298.25, "taxa": 142.01}, {"cod": "T-782", "nome": "ANJOS DA GUARDA", "last": "2026-07-29", "gmv": 3968.0, "casco": 29.83, "taxa": 230.04}, {"cod": "T-887", "nome": "S.D.L SISTEMA DE DIST. LOTERI", "last": "2026-07-29", "gmv": 296.0, "casco": 0.0, "taxa": 102.35}, {"cod": "T-901", "nome": "POSTO MUTUCA", "last": "2026-07-29", "gmv": 658.0, "casco": 0.0, "taxa": 133.83}, {"cod": "T-975", "nome": "CAPARAÓ ALAMEDA DA SERRA INCOR", "last": "2026-07-29", "gmv": 900.0, "casco": 0.0, "taxa": 126.72}, {"cod": "T-1024", "nome": "ACCENTURE DO BRASIL", "last": "2026-07-28", "gmv": 9712.0, "casco": 159.01, "taxa": 533.51}, {"cod": "T-1215", "nome": "JB CONSERVADORA LTDA", "last": "2026-07-28", "gmv": 6532.0, "casco": 507.11, "taxa": 335.18}, {"cod": "T-1402", "nome": "RESIDENCIAL SERRA DO LUAR", "last": "2026-07-28", "gmv": 312.0, "casco": 0.0, "taxa": 103.01}, {"cod": "T-1466", "nome": "CGMP CENTRO DE GESTAO MEIOS DE", "last": "2026-07-28", "gmv": 996.0, "casco": 0.0, "taxa": 130.57}, {"cod": "T-1520", "nome": "BRANDT MEIO AMBIENTE LTDA", "last": "2026-07-28", "gmv": 1212.0, "casco": 59.66, "taxa": 135.1}, {"cod": "T-1596", "nome": "BRASANITAS EMPRESA BRASILEIRA", "last": "2026-07-28", "gmv": 728.0, "casco": 0.0, "taxa": 119.78}, {"cod": "T-1622", "nome": "SOLUCAO CORTE E DOBRA DE METAI", "last": "2026-07-28", "gmv": 992.0, "casco": 29.83, "taxa": 139.03}, {"cod": "T-1638", "nome": "SDMG", "last": "2026-07-28", "gmv": 508.0, "casco": 0.0, "taxa": 107.6}, {"cod": "T-1724", "nome": "ROESEL TRANSPORTES", "last": "2026-07-28", "gmv": 1316.0, "casco": 39.74, "taxa": 130.55}, {"cod": "T-1732", "nome": "W. MARCAS E GESTAO DUAS RODAS", "last": "2026-07-28", "gmv": 4883.0, "casco": 119.22, "taxa": 325.38}, {"cod": "T-1739", "nome": "PTO ANDAIMES", "last": "2026-07-28", "gmv": 1878.51, "casco": 19.87, "taxa": 204.8}, {"cod": "T-1746", "nome": "TRATEMI", "last": "2026-07-28", "gmv": 520.0, "casco": 69.57, "taxa": 70.46}, {"cod": "T-1862", "nome": "DEPOSITO PETROLIM", "last": "2026-07-28", "gmv": 1040.0, "casco": 0.0, "taxa": 132.35}, {"cod": "T-1897", "nome": "GEOTECH", "last": "2026-07-28", "gmv": 148.77, "casco": 0.0, "taxa": 55.22}, {"cod": "T-1961", "nome": "PMT LIMPEZA E CONSERVACAO", "last": "2026-07-28", "gmv": 1638.0, "casco": 208.81, "taxa": 169.37}, {"cod": "T-1966", "nome": "PRIMATTO JARDINAGEM", "last": "2026-07-28", "gmv": 2408.0, "casco": 89.44, "taxa": 200.41}, {"cod": "T-1982", "nome": "INSTITUTO NACIONAL DE TECNOLOG", "last": "2026-07-28", "gmv": 23486.17, "casco": 149.15, "taxa": 1044.89}, {"cod": "T-2065", "nome": "POLICO", "last": "2026-07-28", "gmv": 528.0, "casco": 0.0, "taxa": 108.38}, {"cod": "T-2110", "nome": "TS COMERCIO, LOCACAO E SERVICO", "last": "2026-07-28", "gmv": 596.0, "casco": 0.0, "taxa": 123.57}, {"cod": "T-2122", "nome": "LOJÃO PAGUE MENOS", "last": "2026-07-28", "gmv": 1448.0, "casco": 0.0, "taxa": 148.79}, {"cod": "T-2123", "nome": "M DIAS BRANCO", "last": "2026-07-28", "gmv": 569.0, "casco": 0.0, "taxa": 99.85}, {"cod": "T-2140", "nome": "EPR VIA MINEIRA S.A.", "last": "2026-07-28", "gmv": 2662.0, "casco": 139.14, "taxa": 223.56}, {"cod": "T-2151", "nome": "CIDADE MARAVILHOSA INDUSTRIA E", "last": "2026-07-28", "gmv": 1189.0, "casco": 39.74, "taxa": 150.68}, {"cod": "T-2152", "nome": "CONSTRUTORA LAGE E GOMES", "last": "2026-07-28", "gmv": 2456.0, "casco": 208.76, "taxa": 196.29}, {"cod": "T-2192", "nome": "COOPERATIVA DE CREDITO DE LIVR", "last": "2026-07-28", "gmv": 492.0, "casco": 0.0, "taxa": 110.27}, {"cod": "T-2213", "nome": "FAISTON", "last": "2026-07-28", "gmv": 521.08, "casco": 0.0, "taxa": 97.83}, {"cod": "T-2218", "nome": "PCP ENGENHARIA", "last": "2026-07-28", "gmv": 2008.0, "casco": 39.74, "taxa": 210.12}, {"cod": "T-2231", "nome": "POSTO BERNARDO LTDA", "last": "2026-07-28", "gmv": 216.0, "casco": 59.66, "taxa": 78.3}, {"cod": "T-272", "nome": "PIC LANCHES", "last": "2026-07-28", "gmv": 4818.0, "casco": 109.36, "taxa": 310.44}, {"cod": "T-276", "nome": "SUPERMERCADOS BH.", "last": "2026-07-28", "gmv": 34014.0, "casco": 387.79, "taxa": 1462.23}, {"cod": "T-303", "nome": "MINAS NAÚTICO", "last": "2026-07-28", "gmv": 3066.5, "casco": 139.19, "taxa": 239.67}, {"cod": "T-324", "nome": "HOSPITAL DE OLHOS", "last": "2026-07-28", "gmv": 1490.0, "casco": 29.83, "taxa": 150.49}, {"cod": "T-334", "nome": "BIOCOR HOSPITAL", "last": "2026-07-28", "gmv": 12308.0, "casco": 318.02, "taxa": 515.72}, {"cod": "T-466", "nome": "PÃO DA SERRA", "last": "2026-07-28", "gmv": 2962.0, "casco": 0.0, "taxa": 494.04}, {"cod": "T-509", "nome": "FUNDACAO HOSPITALAR NOSSA SENH", "last": "2026-07-28", "gmv": 32986.0, "casco": 437.34, "taxa": 1392.44}, {"cod": "T-543", "nome": "RESIDENCIAL VEREDAS DAS GERAES", "last": "2026-07-28", "gmv": 604.0, "casco": 0.0, "taxa": 76.02}, {"cod": "T-642", "nome": "LAURENT", "last": "2026-07-28", "gmv": 240.0, "casco": 0.0, "taxa": 76.7}, {"cod": "T-670", "nome": "MC DONALD'S COM. DE ALIMENTOS", "last": "2026-07-28", "gmv": 6032.0, "casco": 268.27, "taxa": 436.88}, {"cod": "T-790", "nome": "PIMENTA DE ÁVILA", "last": "2026-07-28", "gmv": 678.0, "casco": 0.0, "taxa": 130.69}, {"cod": "T-986", "nome": "COOPIMIMG", "last": "2026-07-28", "gmv": 666.0, "casco": 0.0, "taxa": 117.28}, {"cod": "T-1238", "nome": "SOLUCARBE USINAGEM GONDIM LTDA", "last": "2026-07-27", "gmv": 504.0, "casco": 0.0, "taxa": 97.84}, {"cod": "T-1278", "nome": "LMINAS", "last": "2026-07-27", "gmv": 568.0, "casco": 0.0, "taxa": 113.34}, {"cod": "T-1296", "nome": "REDE CIDADA", "last": "2026-07-27", "gmv": 1258.32, "casco": 268.27, "taxa": 152.52}, {"cod": "T-1532", "nome": "MAXTRACK INDUSTRIAL LTDA", "last": "2026-07-27", "gmv": 400.0, "casco": 29.83, "taxa": 80.73}, {"cod": "T-1563", "nome": "IPIRANGA MULTISERVICOS", "last": "2026-07-27", "gmv": 27635.2, "casco": 944.45, "taxa": 1292.42}, {"cod": "T-1565", "nome": "ALGAR SEGURANÇA E ELETRÔNICA", "last": "2026-07-27", "gmv": 2384.0, "casco": 139.09, "taxa": 225.28}, {"cod": "T-1597", "nome": "REGIAO ADMINISTRATIVA DE MINAS", "last": "2026-07-27", "gmv": 25856.0, "casco": 874.38, "taxa": 1257.28}, {"cod": "T-1686", "nome": "WABTEC CORPORATION", "last": "2026-07-27", "gmv": 284.0, "casco": 0.0, "taxa": 98.85}, {"cod": "T-1744", "nome": "TPF ENGENHARIA", "last": "2026-07-27", "gmv": 290.0, "casco": 0.0, "taxa": 102.11}, {"cod": "T-1770", "nome": "COLÉGIO BATISTA MINEIRO EM NL", "last": "2026-07-27", "gmv": 20608.0, "casco": 59.66, "taxa": 822.65}, {"cod": "T-1887", "nome": "CHAMMAS ENGENHARIA", "last": "2026-07-27", "gmv": 822.0, "casco": 29.83, "taxa": 117.21}, {"cod": "T-1927", "nome": "HENRIMAX USINAGEM GONDIM EIREL", "last": "2026-07-27", "gmv": 592.0, "casco": 0.0, "taxa": 110.9}, {"cod": "T-1955", "nome": "PRESERVES TECHNOLOGY", "last": "2026-07-27", "gmv": 2210.0, "casco": 0.0, "taxa": 205.35}, {"cod": "T-1960", "nome": "NEO OFTALMOLOGIA VILA DA SERRA", "last": "2026-07-27", "gmv": 1292.0, "casco": 0.0, "taxa": 125.7}, {"cod": "T-1977", "nome": "REDE CIDADA", "last": "2026-07-27", "gmv": 21451.4, "casco": 1679.49, "taxa": 1094.89}, {"cod": "T-2075", "nome": "ELEVADORES OTIS LTDA", "last": "2026-07-27", "gmv": 496.0, "casco": 0.0, "taxa": 97.51}, {"cod": "T-2131", "nome": "MINAS SOLUÇÕES", "last": "2026-07-27", "gmv": 1225.0, "casco": 0.0, "taxa": 152.73}, {"cod": "T-2139", "nome": "EDIFICIO ATLANTA", "last": "2026-07-27", "gmv": 588.0, "casco": 0.0, "taxa": 114.14}, {"cod": "T-2191", "nome": "NEXO GESTAO EMPRESARIAL LTDA", "last": "2026-07-27", "gmv": 2020.0, "casco": 19.87, "taxa": 184.77}, {"cod": "T-2222", "nome": "PARVI LOCADORA", "last": "2026-07-27", "gmv": 2000.0, "casco": 39.74, "taxa": 222.86}, {"cod": "T-2246", "nome": "PREVENIR MAIS SAÚDE LTDA", "last": "2026-07-27", "gmv": 306.0, "casco": 79.48, "taxa": 62.09}, {"cod": "T-2258", "nome": "BACKSTAGE SALON", "last": "2026-07-27", "gmv": 1000.0, "casco": 59.61, "taxa": 89.23}, {"cod": "T-2264", "nome": "ESTANCIA SERRANA", "last": "2026-07-27", "gmv": 288.0, "casco": 49.7, "taxa": 50.37}, {"cod": "T-2267", "nome": "07094346000145", "last": "2026-07-27", "gmv": 207.4, "casco": 19.87, "taxa": 33.18}, {"cod": "T-339", "nome": "ANGLOGOLD ASHANTI", "last": "2026-07-27", "gmv": 26134.0, "casco": 268.47, "taxa": 1138.77}, {"cod": "T-417", "nome": "ASSOCIAÇÃO GERAL ALPHAVILLE", "last": "2026-07-27", "gmv": 5441.4, "casco": 29.83, "taxa": 298.63}, {"cod": "T-421", "nome": "RESIDENCIAL DAS FLORES", "last": "2026-07-27", "gmv": 1188.0, "casco": 0.0, "taxa": 138.31}, {"cod": "T-528", "nome": "ARMINTER", "last": "2026-07-27", "gmv": 2694.0, "casco": 69.57, "taxa": 211.94}, {"cod": "T-531", "nome": "SINDICATO DOS MINEIROS", "last": "2026-07-27", "gmv": 3631.0, "casco": 59.61, "taxa": 249.7}, {"cod": "T-577", "nome": "RESIDENCIAL DAS ÁRVORES", "last": "2026-07-27", "gmv": 560.0, "casco": 0.0, "taxa": 74.25}, {"cod": "T-616", "nome": "V E M DO BRASIL S A", "last": "2026-07-27", "gmv": 924.0, "casco": 89.44, "taxa": 101.85}, {"cod": "T-638", "nome": "MIGUELÃO", "last": "2026-07-27", "gmv": 1084.0, "casco": 29.83, "taxa": 134.14}, {"cod": "T-675", "nome": "KFE", "last": "2026-07-27", "gmv": 584.0, "casco": 0.0, "taxa": 126.9}, {"cod": "T-1604", "nome": "MULTI FORMATO DISTRIBUIDORA S/", "last": "2026-07-24", "gmv": 23044.0, "casco": 894.15, "taxa": 1096.61}, {"cod": "T-1649", "nome": "SICOOB CREDISERV", "last": "2026-07-24", "gmv": 730.0, "casco": 29.83, "taxa": 119.85}, {"cod": "T-1819", "nome": "AMERICANAS S.A.", "last": "2026-07-24", "gmv": 1745.08, "casco": 149.05, "taxa": 198.84}, {"cod": "T-1962", "nome": "PRODOMO DESIGN", "last": "2026-07-24", "gmv": 88.0, "casco": 0.0, "taxa": 29.38}, {"cod": "T-2041", "nome": "ALPHASCAN", "last": "2026-07-24", "gmv": 528.0, "casco": 0.0, "taxa": 45.7}, {"cod": "T-2130", "nome": "NONNA TERCEIRIZACAO DE SERVICO", "last": "2026-07-24", "gmv": 226.0, "casco": 19.87, "taxa": 47.87}, {"cod": "T-2164", "nome": "ACB", "last": "2026-07-24", "gmv": 116312.0, "casco": 4343.57, "taxa": 4894.43}, {"cod": "T-2199", "nome": "APLIC TECNOLOGIA E SERVICOS", "last": "2026-07-24", "gmv": 120.25, "casco": 0.0, "taxa": 93.05}, {"cod": "T-2230", "nome": "FM2C SERVICOS GERAIS LTDA.", "last": "2026-07-24", "gmv": 1756.0, "casco": 29.83, "taxa": 187.05}, {"cod": "T-2260", "nome": "FAENOL SOCIAL", "last": "2026-07-24", "gmv": 5270.0, "casco": 556.36, "taxa": 328.67}, {"cod": "T-2263", "nome": "VALE", "last": "2026-07-24", "gmv": 264.0, "casco": 39.74, "taxa": 36.48}, {"cod": "T-325", "nome": "FACULDADES MILTON CAMPOS", "last": "2026-07-24", "gmv": 912.0, "casco": 0.0, "taxa": 127.2}, {"cod": "T-446", "nome": "CLUBE DAS QUINTAS", "last": "2026-07-24", "gmv": 3308.0, "casco": 49.7, "taxa": 210.83}, {"cod": "T-621", "nome": "CARREFOUR COM. E IND. LTDA.", "last": "2026-07-24", "gmv": 1590.0, "casco": 59.61, "taxa": 167.45}, {"cod": "T-628", "nome": "SERV REG IMOV N LIMA", "last": "2026-07-24", "gmv": 4644.0, "casco": 29.83, "taxa": 277.59}, {"cod": "T-937", "nome": "CESAM BH", "last": "2026-07-24", "gmv": 570.0, "casco": 0.0, "taxa": 74.65}, {"cod": "T-1375", "nome": "GRUPO JULIO SIMÕES", "last": "2026-07-23", "gmv": 3238.2, "casco": 258.36, "taxa": 220.94}, {"cod": "T-1411", "nome": "SEC DE AÇÃO SOCIAL - SEMAS", "last": "2026-07-23", "gmv": 24328.0, "casco": 656.01, "taxa": 0.0}, {"cod": "T-1525", "nome": "ONCOBIO", "last": "2026-07-23", "gmv": 2728.0, "casco": 39.74, "taxa": 219.45}, {"cod": "T-1650", "nome": "COND. ED. RES. PIEMONTE", "last": "2026-07-23", "gmv": 244.0, "casco": 0.0, "taxa": 35.68}, {"cod": "T-2156", "nome": "GARAPAO NOVA LIMA", "last": "2026-07-23", "gmv": 0.0, "casco": 99.35, "taxa": 0.0}, {"cod": "T-2229", "nome": "ONCOCLINICAS DO BRASIL SERVIÇO", "last": "2026-07-23", "gmv": 336.0, "casco": 29.83, "taxa": 65.23}, {"cod": "T-384", "nome": "KONICA MINOLTA", "last": "2026-07-23", "gmv": 1424.0, "casco": 0.0, "taxa": 143.4}, {"cod": "T-493", "nome": "PRODUTOS IDEAL", "last": "2026-07-23", "gmv": 7658.0, "casco": 228.63, "taxa": 399.05}, {"cod": "T-1206", "nome": "LABORATÓRIO GERALDO LUSTOSA", "last": "2026-07-22", "gmv": 1038.0, "casco": 0.0, "taxa": 132.27}, {"cod": "T-1424", "nome": "POSTO CURVA DO RETIRO", "last": "2026-07-22", "gmv": 518.0, "casco": 0.0, "taxa": 59.63}, {"cod": "T-1514", "nome": "ASSOCIAÇÃO DE ENSINO SOCIAL PR", "last": "2026-07-22", "gmv": 6032.0, "casco": 39.74, "taxa": 346.45}, {"cod": "T-1848", "nome": "BOUGENOT LAVANDERIA", "last": "2026-07-22", "gmv": 3600.0, "casco": 0.0, "taxa": 235.52}, {"cod": "T-1857", "nome": "GOMESFER", "last": "2026-07-22", "gmv": 2392.0, "casco": 59.66, "taxa": 181.24}, {"cod": "T-1874", "nome": "POSTO CHEFAO", "last": "2026-07-22", "gmv": 1008.0, "casco": 0.0, "taxa": 92.3}, {"cod": "T-1061", "nome": "SODEXO DO BRASIL COMERCIAL LTD", "last": "2026-07-21", "gmv": 10718.0, "casco": 486.94, "taxa": 625.73}, {"cod": "T-1338", "nome": "OUTBACK STEAKHOUSE RESTAURANTE", "last": "2026-07-21", "gmv": 160.0, "casco": 19.87, "taxa": 32.29}, {"cod": "T-1583", "nome": "CUSHMAN & WAKEFIELD", "last": "2026-07-21", "gmv": 164.0, "casco": 19.87, "taxa": 32.45}, {"cod": "T-1745", "nome": "CLINICA VETERINARIA NOVA LIMA", "last": "2026-07-21", "gmv": 1028.0, "casco": 0.0, "taxa": 106.03}, {"cod": "T-2261", "nome": "SADA TRANSPORTES E ARMAZENAGEN", "last": "2026-07-21", "gmv": 496.0, "casco": 79.48, "taxa": 45.83}, {"cod": "T-2273", "nome": "SADA TRANSPORTES E ARMAZENAGEN", "last": "2026-07-21", "gmv": 128.0, "casco": 39.74, "taxa": 18.08}, {"cod": "T-590", "nome": "INSTITUTO HERMES PARDINI", "last": "2026-07-21", "gmv": 4220.0, "casco": 576.43, "taxa": 247.58}, {"cod": "T-665", "nome": "O BOTICÁRIO", "last": "2026-07-21", "gmv": 337.4, "casco": 0.0, "taxa": 90.1}, {"cod": "T-1045", "nome": "SPAL INDUSTRIA BRASILEIRA DE B", "last": "2026-07-20", "gmv": 616.0, "casco": 19.87, "taxa": 63.58}, {"cod": "T-1527", "nome": "GESTAODEOPERADORAS.VT.BR@PLUXE", "last": "2026-07-20", "gmv": 1028.0, "casco": 39.74, "taxa": 131.87}, {"cod": "T-1832", "nome": "MINASMAQUINAS", "last": "2026-07-20", "gmv": 938.0, "casco": 49.7, "taxa": 86.8}, {"cod": "T-1867", "nome": "VIA", "last": "2026-07-20", "gmv": 2624.0, "casco": 0.0, "taxa": 196.21}, {"cod": "T-2094", "nome": "INSTITUTO CIDADES INTELIGENTES", "last": "2026-07-20", "gmv": 3150.0, "casco": 79.48, "taxa": 269.06}, {"cod": "T-2166", "nome": "QUANTUM ENGENHARIA", "last": "2026-07-20", "gmv": 19658.0, "casco": 686.09, "taxa": 1056.69}, {"cod": "T-2244", "nome": "CONFIARE ADMINISTRADORA E SERV", "last": "2026-07-20", "gmv": 1470.0, "casco": 99.35, "taxa": 132.65}, {"cod": "T-376", "nome": "IBM BRASIL IND. MÁQUINAS E SER", "last": "2026-07-20", "gmv": 596.0, "casco": 0.0, "taxa": 114.48}, {"cod": "T-682", "nome": "MAPLE BEAR CANADIAN SCHOLL", "last": "2026-07-20", "gmv": 1557.0, "casco": 79.48, "taxa": 153.19}, {"cod": "T-710", "nome": "VALE DOS CRISTAIS NASCENTES", "last": "2026-07-20", "gmv": 294.0, "casco": 0.0, "taxa": 102.29}, {"cod": "T-1056", "nome": "DROGARIA LUCENA", "last": "2026-07-17", "gmv": 7992.0, "casco": 0.0, "taxa": 425.43}, {"cod": "T-1154", "nome": "PERSONALITE SERVIÇOS", "last": "2026-07-17", "gmv": 740.0, "casco": 0.0, "taxa": 120.27}, {"cod": "T-1608", "nome": "BENASSI MINAS", "last": "2026-07-17", "gmv": 3160.0, "casco": 159.06, "taxa": 221.12}, {"cod": "T-1691", "nome": "PROTEGE S/A PROTECAO E TRANSPO", "last": "2026-07-17", "gmv": 464.0, "casco": 0.0, "taxa": 105.86}, {"cod": "T-1712", "nome": "MINAS NORTE SERVIÇOS LTDA", "last": "2026-07-17", "gmv": 1433.3, "casco": 29.83, "taxa": 156.29}, {"cod": "T-2039", "nome": "ARCA KIDS", "last": "2026-07-17", "gmv": 288.23, "casco": 19.87, "taxa": 61.4}, {"cod": "T-2073", "nome": "JARDIM DAS AZALEIAS", "last": "2026-07-17", "gmv": 344.0, "casco": 19.87, "taxa": 76.11}, {"cod": "T-2074", "nome": "MICO ESTRELA", "last": "2026-07-17", "gmv": 2120.0, "casco": 79.48, "taxa": 220.7}, {"cod": "T-2159", "nome": "FAZENDINHA", "last": "2026-07-17", "gmv": 2798.0, "casco": 39.74, "taxa": 241.95}, {"cod": "T-2162", "nome": "INSERVICE - MG SERVICOS S/A", "last": "2026-07-17", "gmv": 92.0, "casco": 39.74, "taxa": 16.63}, {"cod": "T-2165", "nome": "LONDON", "last": "2026-07-17", "gmv": 930.0, "casco": 69.57, "taxa": 114.59}, {"cod": "T-2281", "nome": "ATACAREJAO DO LAR", "last": "2026-07-16", "gmv": 0.0, "casco": 79.48, "taxa": 0.0}, {"cod": "T-475", "nome": "EPA SUPERMERCADOS", "last": "2026-07-16", "gmv": 14090.0, "casco": 367.62, "taxa": 671.19}, {"cod": "T-730", "nome": "VISIONTECH MEDICAL OPTICS LTDA", "last": "2026-07-16", "gmv": 1230.0, "casco": 59.66, "taxa": 140.0}, {"cod": "T-1800", "nome": "REGISTRO CIVIL DAS PESSOAS NAT", "last": "2026-07-14", "gmv": 1552.36, "casco": 59.61, "taxa": 101.23}, {"cod": "T-2077", "nome": "CRECHE FRE", "last": "2026-07-14", "gmv": 1976.0, "casco": 29.83, "taxa": 182.98}, {"cod": "T-2241", "nome": "DIREÇÃO SEGURANÇA", "last": "2026-07-14", "gmv": 754.0, "casco": 39.74, "taxa": 82.06}, {"cod": "T-1311", "nome": "RENNER", "last": "2026-07-13", "gmv": 104.0, "casco": 19.87, "taxa": 17.11}, {"cod": "T-1676", "nome": "JOAO ANTONIO APOSTOLO", "last": "2026-07-13", "gmv": 528.0, "casco": 0.0, "taxa": 98.82}, {"cod": "T-1932", "nome": "AZUL SERVICE", "last": "2026-07-13", "gmv": 3852.0, "casco": 198.85, "taxa": 250.82}, {"cod": "T-2277", "nome": "BRP CLINICAS LTDA", "last": "2026-07-13", "gmv": 176.0, "casco": 39.74, "taxa": 20.01}, {"cod": "T-608", "nome": "SENAI", "last": "2026-07-13", "gmv": 1748.0, "casco": 109.36, "taxa": 173.81}, {"cod": "T-1136", "nome": "ED. LUMIERE RESIDENCES", "last": "2026-07-10", "gmv": 1432.0, "casco": 0.0, "taxa": 148.15}, {"cod": "T-1175", "nome": "BAUMINAS LOG E TRANSPORTE LTDA", "last": "2026-07-10", "gmv": 1970.0, "casco": 0.0, "taxa": 169.84}, {"cod": "T-1752", "nome": "MART MINAS DISTRIBUIÇÃO LTDA", "last": "2026-07-10", "gmv": 14062.0, "casco": 496.9, "taxa": 747.58}, {"cod": "T-2189", "nome": "B34 - SEGURPRO TECNOLOGIA EM S", "last": "2026-07-10", "gmv": 480.0, "casco": 0.0, "taxa": 96.86}, {"cod": "T-286", "nome": "NORMA´S RESTAURANTE", "last": "2026-07-10", "gmv": 7940.0, "casco": 178.98, "taxa": 423.35}, {"cod": "T-298", "nome": "BAUMINAS QUÍMICA LTDA", "last": "2026-07-10", "gmv": 3334.0, "casco": 109.31, "taxa": 255.64}, {"cod": "T-640", "nome": "QUINTAS DO SOL", "last": "2026-07-10", "gmv": 2260.0, "casco": 0.0, "taxa": 181.5}, {"cod": "T-863", "nome": "JAMBREIRO", "last": "2026-07-10", "gmv": 1059.4, "casco": 59.66, "taxa": 132.12}, {"cod": "T-2184", "nome": "UNIMED BH", "last": "2026-07-09", "gmv": 552.0, "casco": 29.83, "taxa": 99.23}, {"cod": "T-2187", "nome": "AIKO COMERCIO DE ALIMENTOS LTD", "last": "2026-07-09", "gmv": 0.0, "casco": 99.35, "taxa": 0.0}, {"cod": "T-518", "nome": "MATA NATIVA", "last": "2026-07-09", "gmv": 680.09, "casco": 29.83, "taxa": 117.82}, {"cod": "T-1021", "nome": "CATALAO COMERCIAL LTDA", "last": "2026-07-08", "gmv": 1220.0, "casco": 59.66, "taxa": 139.61}, {"cod": "T-1067", "nome": "SERENA LANCHES", "last": "2026-07-08", "gmv": 962.0, "casco": 0.0, "taxa": 116.3}, {"cod": "T-2016", "nome": "GREENWICH KIDS", "last": "2026-07-08", "gmv": 600.38, "casco": 0.0, "taxa": 101.7}, {"cod": "T-2238", "nome": "OSESP COMERCIAL", "last": "2026-07-08", "gmv": 896.0, "casco": 19.87, "taxa": 113.64}, {"cod": "T-2247", "nome": "CTOP ADMINISTRAÇÃO", "last": "2026-07-08", "gmv": 60.0, "casco": 39.74, "taxa": 15.34}, {"cod": "T-432", "nome": "LUMIERE PLACE", "last": "2026-07-07", "gmv": 1998.0, "casco": 0.0, "taxa": 170.98}, {"cod": "T-1325", "nome": "SCHERR ACQUA", "last": "2026-07-06", "gmv": 631.9, "casco": 0.0, "taxa": 64.23}, {"cod": "T-1362", "nome": "RB SERVIÇOS", "last": "2026-07-06", "gmv": 392.0, "casco": 29.83, "taxa": 87.5}, {"cod": "T-1541", "nome": "SUSTENT", "last": "2026-07-06", "gmv": 1200.0, "casco": 59.66, "taxa": 125.88}, {"cod": "T-1967", "nome": "CENTRO VETERINARIO VET LUMAN", "last": "2026-07-06", "gmv": 2380.0, "casco": 169.02, "taxa": 186.34}, {"cod": "T-1985", "nome": "FERMAT SERVICE", "last": "2026-07-06", "gmv": 852.0, "casco": 59.61, "taxa": 95.98}, {"cod": "T-2078", "nome": "CRECHE FRE", "last": "2026-07-06", "gmv": 1164.0, "casco": 0.0, "taxa": 150.27}, {"cod": "T-2098", "nome": "LOJA ELETRICA LTDA", "last": "2026-07-06", "gmv": 356.0, "casco": 0.0, "taxa": 76.58}, {"cod": "T-2103", "nome": "CONTINERE SERVICOS LTDA", "last": "2026-07-06", "gmv": 600.0, "casco": 0.0, "taxa": 88.8}, {"cod": "T-2134", "nome": "PAROQUIA N S RAINHA DOS ANJOS", "last": "2026-07-06", "gmv": 320.0, "casco": 0.0, "taxa": 64.56}, {"cod": "T-285", "nome": "TOWN HOUSES", "last": "2026-07-06", "gmv": 2328.0, "casco": 59.61, "taxa": 171.35}, {"cod": "T-1666", "nome": "FETALI ULTRASSONOGRAFIA E MEDI", "last": "2026-07-03", "gmv": 1038.0, "casco": 0.0, "taxa": 115.77}, {"cod": "T-460", "nome": "SUPERMECADO VERDEMAR", "last": "2026-07-03", "gmv": 17649.63, "casco": 685.74, "taxa": 803.65}, {"cod": "T-1208", "nome": "SUBWAY", "last": "2026-07-02", "gmv": 668.0, "casco": 19.87, "taxa": 117.36}, {"cod": "T-1913", "nome": "SAS CERTIFICADORA", "last": "2026-07-02", "gmv": 506.0, "casco": 29.83, "taxa": 69.9}, {"cod": "T-2160", "nome": "HOPE INDUSTRIA E COMERCIO DE A", "last": "2026-07-02", "gmv": 542.0, "casco": 29.83, "taxa": 73.52}, {"cod": "T-2257", "nome": "SACOLAO HORTISUL", "last": "2026-07-02", "gmv": 0.0, "casco": 536.49, "taxa": 0.0}, {"cod": "T-323", "nome": "DROGARIA ARAÚJO", "last": "2026-07-02", "gmv": 13897.0, "casco": 2972.84, "taxa": 753.85}, {"cod": "T-795", "nome": "CONDOMINIO ENGECOM", "last": "2026-07-02", "gmv": 360.0, "casco": 0.0, "taxa": 92.04}, {"cod": "T-1101", "nome": "BOM RETIRO", "last": "2026-07-01", "gmv": 2756.0, "casco": 19.87, "taxa": 214.44}, {"cod": "T-2124", "nome": "THE RANCH", "last": "2026-07-01", "gmv": 1046.0, "casco": 29.83, "taxa": 132.59}, {"cod": "T-2020", "nome": "3S INVESTIMENTOS E NEGOCIOS", "last": "2026-06-30", "gmv": 576.15, "casco": 0.0, "taxa": 74.89}, {"cod": "T-2112", "nome": "VETLUMAN ESTETICA ANIMAL", "last": "2026-06-30", "gmv": 0.0, "casco": 39.74, "taxa": 0.0}, {"cod": "T-2245", "nome": "NOVO HORIZONTE", "last": "2026-06-30", "gmv": 924.0, "casco": 109.31, "taxa": 111.32}, {"cod": "T-521", "nome": "ASSOCIAÇÃO DOS SERVIDORES", "last": "2026-06-30", "gmv": 1176.0, "casco": 29.83, "taxa": 124.91}, {"cod": "T-2076", "nome": "CRECHE FRE", "last": "2026-06-29", "gmv": 3276.0, "casco": 0.0, "taxa": 209.55}, {"cod": "T-2203", "nome": "ANDRADE GUTIERREZ CONSTRUCOES", "last": "2026-06-29", "gmv": 2784.0, "casco": 308.11, "taxa": 241.4}, {"cod": "T-1545", "nome": "OBRALOC", "last": "2026-06-26", "gmv": 1872.0, "casco": 29.83, "taxa": 127.12}, {"cod": "T-2007", "nome": "RENATO BARBOSA SANT", "last": "2026-06-26", "gmv": 162.0, "casco": 29.83, "taxa": 32.37}, {"cod": "T-2018", "nome": "FHSFA", "last": "2026-06-26", "gmv": 151.69, "casco": 0.0, "taxa": 43.08}, {"cod": "T-2082", "nome": "DOBRAFLEX CORTE E DOBRA DE MET", "last": "2026-06-26", "gmv": 988.0, "casco": 19.87, "taxa": 130.26}, {"cod": "T-2253", "nome": "DEPOSITO IRMAOS BECKER", "last": "2026-06-26", "gmv": 404.0, "casco": 19.87, "taxa": 67.96}, {"cod": "T-2072", "nome": "SMARTPARKING", "last": "2026-06-25", "gmv": 472.0, "casco": 0.0, "taxa": 96.53}, {"cod": "T-514", "nome": "COLÉGIO SANTA MARIA", "last": "2026-06-25", "gmv": 1329.17, "casco": 0.0, "taxa": 105.19}, {"cod": "T-624", "nome": "AUTO GIRO", "last": "2026-06-25", "gmv": 1612.0, "casco": 29.83, "taxa": 142.47}, {"cod": "T-1213", "nome": "PULSUS", "last": "2026-06-24", "gmv": 92.0, "casco": 0.0, "taxa": 16.63}, {"cod": "T-1826", "nome": "RESIDENCIAL COSTA LAGUNA", "last": "2026-06-24", "gmv": 568.75, "casco": 0.0, "taxa": 97.43}, {"cod": "T-1882", "nome": "FERNANDADANIELLE PAIVA DRUMOND", "last": "2026-06-24", "gmv": 5836.0, "casco": 119.32, "taxa": 286.88}, {"cod": "T-2106", "nome": "CONSOMINAS ENGENHARIA", "last": "2026-06-24", "gmv": 278.0, "casco": 0.0, "taxa": 62.88}, {"cod": "T-2137", "nome": "CONSORCIO REVITALIZACAO NOVA L", "last": "2026-06-24", "gmv": 7604.0, "casco": 656.26, "taxa": 359.89}, {"cod": "T-2193", "nome": "VR BENEFICIOS E SERVICOS DE PR", "last": "2026-06-24", "gmv": 756.0, "casco": 0.0, "taxa": 108.0}, {"cod": "T-2097", "nome": "GHC CONSTRUCOES", "last": "2026-06-22", "gmv": 956.0, "casco": 0.0, "taxa": 141.89}, {"cod": "T-2194", "nome": "EDUCA NOVA LIMA", "last": "2026-06-22", "gmv": 5655.87, "casco": 0.0, "taxa": 305.05}, {"cod": "T-1947", "nome": "ANDERSON CARVALHO", "last": "2026-06-19", "gmv": 1296.0, "casco": 0.0, "taxa": 88.26}, {"cod": "T-2026", "nome": "CL ENGENHARIA E SERVIÇOS LTDA", "last": "2026-06-19", "gmv": 176.0, "casco": 0.0, "taxa": 31.96}, {"cod": "T-1823", "nome": "I.S.B. DO BRASIL", "last": "2026-06-16", "gmv": 1836.0, "casco": 59.61, "taxa": 151.52}, {"cod": "T-1687", "nome": "CONEM", "last": "2026-06-15", "gmv": 744.0, "casco": 0.0, "taxa": 94.59}, {"cod": "T-1447", "nome": "ED EMYR SOARES", "last": "2026-06-12", "gmv": 360.0, "casco": 0.0, "taxa": 92.03}, {"cod": "T-772", "nome": "FAC. PRES.ANTº C. DE NOVA LIMA", "last": "2026-06-10", "gmv": 448.0, "casco": 0.0, "taxa": 56.82}, {"cod": "T-1063", "nome": "ELF COMERCIO E SERVIÇOS", "last": "2026-06-09", "gmv": 400.0, "casco": 0.0, "taxa": 67.8}, {"cod": "T-540", "nome": "BY MOTO", "last": "2026-06-08", "gmv": 278.0, "casco": 0.0, "taxa": 24.12}, {"cod": "T-2115", "nome": "MUNDO20 NOVA LIMA LTDA", "last": "2026-06-05", "gmv": 200.38, "casco": 0.0, "taxa": 33.9}, {"cod": "T-296", "nome": "ULTRA-SOM CORPO", "last": "2026-06-05", "gmv": 304.0, "casco": 0.0, "taxa": 38.1}, {"cod": "T-2172", "nome": "SCHAK", "last": "2026-06-01", "gmv": 210.0, "casco": 0.0, "taxa": 47.22}, {"cod": "T-1868", "nome": "OLEGARIO", "last": "2026-05-28", "gmv": 88.0, "casco": 397.4, "taxa": 16.47}, {"cod": "T-2188", "nome": "CASA DO CELULAR", "last": "2026-05-28", "gmv": 857.0, "casco": 0.0, "taxa": 99.14}, {"cod": "T-2236", "nome": "APRENDIZADO ATIVO", "last": "2026-05-28", "gmv": 72.0, "casco": 39.74, "taxa": 15.82}, {"cod": "T-2240", "nome": "CODEME ENGENHARIA", "last": "2026-05-28", "gmv": 332.0, "casco": 19.87, "taxa": 65.06}, {"cod": "T-1420", "nome": "ESSENCIAL SISTEMA DE SEGURANCA", "last": "2026-05-27", "gmv": 2284.0, "casco": 39.74, "taxa": 158.92}, {"cod": "T-1464", "nome": "VILA OL", "last": "2026-05-26", "gmv": 716.0, "casco": 0.0, "taxa": 106.37}, {"cod": "T-1759", "nome": "COTRIN CONSTRUTORA TRINDADE LT", "last": "2026-05-26", "gmv": 362.0, "casco": 0.0, "taxa": 76.81}, {"cod": "T-2242", "nome": "FM2C", "last": "2026-05-26", "gmv": 312.0, "casco": 19.87, "taxa": 62.33}, {"cod": "T-1845", "nome": "SOLAR GLOBAL", "last": "2026-05-25", "gmv": 396.0, "casco": 0.0, "taxa": 80.56}, {"cod": "T-2262", "nome": "SEVENX GAMING", "last": "2026-05-25", "gmv": 304.0, "casco": 79.48, "taxa": 25.17}, {"cod": "T-1309", "nome": "ASSOCIACAO VILLE DES LACS", "last": "2026-05-21", "gmv": 186.0, "casco": 29.83, "taxa": 46.26}, {"cod": "T-1335", "nome": "CONSTRUTORA SANTANNA LTDA", "last": "2026-05-07", "gmv": 512.0, "casco": 49.7, "taxa": 72.31}, {"cod": "T-1085", "nome": "MINAS RURAL", "last": "2026-05-06", "gmv": 222.0, "casco": 0.0, "taxa": 60.62}, {"cod": "T-2259", "nome": "MIA IZAKAYA", "last": "2026-05-06", "gmv": 0.0, "casco": 198.7, "taxa": 0.0}, {"cod": "T-422", "nome": "MARCAM INDUSTRIAL LTDA", "last": "2026-05-06", "gmv": 408.0, "casco": 0.0, "taxa": 81.04}, {"cod": "T-2182", "nome": "TRUCK CENTER MOLACO S/A", "last": "2026-05-05", "gmv": 404.0, "casco": 0.0, "taxa": 80.88}, {"cod": "T-690", "nome": "ESCOLA INFANTIL DOCE MEL", "last": "2026-05-04", "gmv": 636.0, "casco": 0.0, "taxa": 77.3}, {"cod": "T-930", "nome": "MINASCOPY NACIONAL LTDA.", "last": "2026-04-27", "gmv": 784.0, "casco": 0.0, "taxa": 83.27}, {"cod": "T-677", "nome": "EST UNIF", "last": "2026-04-20", "gmv": 160.0, "casco": 19.87, "taxa": 32.28}, {"cod": "T-2255", "nome": "BELA COMERCIO", "last": "2026-04-17", "gmv": 0.0, "casco": 19.87, "taxa": 0.0}, {"cod": "T-2239", "nome": "CONATA ENGENHARIA", "last": "2026-04-14", "gmv": 679.41, "casco": 79.48, "taxa": 65.51}, {"cod": "T-2254", "nome": "EMCCAMP URBANISMO NOVA LIMA SA", "last": "2026-04-13", "gmv": 140.0, "casco": 19.87, "taxa": 18.56}, {"cod": "T-1769", "nome": "VIANA PROCESSAMENTO DE DADOS", "last": "2026-04-10", "gmv": 138.0, "casco": 0.0, "taxa": 44.32}, {"cod": "T-952", "nome": "CONDOMÍNIO SAINT HILAIRE", "last": "2026-04-10", "gmv": 236.0, "casco": 0.0, "taxa": 45.86}, {"cod": "T-1870", "nome": "CVRD ESTABELECIMENTO UNIFICADO", "last": "2026-04-07", "gmv": 76.0, "casco": 19.87, "taxa": 15.98}, {"cod": "T-2208", "nome": "GA ENGENHARIA ELETRICA", "last": "2026-04-07", "gmv": 724.0, "casco": 39.74, "taxa": 67.94}, {"cod": "T-1871", "nome": "VALE S.A", "last": "2026-04-02", "gmv": 532.0, "casco": 258.31, "taxa": 34.36}, {"cod": "T-2180", "nome": "MSA MINERAÇÃO SERRA AZUL LTDA", "last": "2026-04-01", "gmv": 240.0, "casco": 0.0, "taxa": 48.43}, {"cod": "T-2251", "nome": "MM ESQUADRIAS LTDA", "last": "2026-04-01", "gmv": 0.0, "casco": 99.35, "taxa": 0.0}, {"cod": "T-1771", "nome": "ADESIAP", "last": "2026-03-30", "gmv": 72.0, "casco": 0.0, "taxa": 31.96}, {"cod": "T-1614", "nome": "FP REPROGRAFIA MANUTENÇÃO", "last": "2026-03-26", "gmv": 316.0, "casco": 59.66, "taxa": 51.5}, {"cod": "T-2219", "nome": "MARIANA MARTELETO", "last": "2026-03-24", "gmv": 192.0, "casco": 0.0, "taxa": 32.57}, {"cod": "T-1664", "nome": "SECURITY SEGURANÇA LTDA", "last": "2026-03-23", "gmv": 76.0, "casco": 0.0, "taxa": 31.96}, {"cod": "T-2252", "nome": "G7 DISTRIBUIDORA", "last": "2026-03-23", "gmv": 0.0, "casco": 19.87, "taxa": 0.0}, {"cod": "T-836", "nome": "FAENOL", "last": "2026-03-23", "gmv": 2308.0, "casco": 49.7, "taxa": 170.54}, {"cod": "T-1797", "nome": "PERSONALITE SEGURANÇA", "last": "2026-03-20", "gmv": 44.0, "casco": 0.0, "taxa": 27.61}, {"cod": "T-2071", "nome": "PROTEGE SERVIÇOS ESPECIAIS LTD", "last": "2026-03-19", "gmv": 120.0, "casco": 0.0, "taxa": 42.27}, {"cod": "T-1884", "nome": "ESCOLA BILBOQUE", "last": "2026-03-05", "gmv": 630.0, "casco": 0.0, "taxa": 51.23}, {"cod": "T-2081", "nome": "CLÍNICA ANDRÉ WERKHAIZER", "last": "2026-03-04", "gmv": 276.0, "casco": 0.0, "taxa": 49.88}, {"cod": "T-2117", "nome": "PASSO A PASSO COM JESUS-CANADA", "last": "2026-03-03", "gmv": 408.0, "casco": 19.87, "taxa": 56.36}, {"cod": "T-2049", "nome": "VDS ENGENHARIA", "last": "2026-02-27", "gmv": 88.0, "casco": 0.0, "taxa": 0.0}, {"cod": "T-1379", "nome": "POSTO VILA DA SERRA LTDA", "last": "2026-02-26", "gmv": 204.0, "casco": 0.0, "taxa": 34.06}, {"cod": "T-1394", "nome": "SPA PREMIER", "last": "2026-02-26", "gmv": 112.0, "casco": 0.0, "taxa": 17.43}, {"cod": "T-1976", "nome": "CERVEJARIA VERACE", "last": "2026-02-26", "gmv": 256.0, "casco": 0.0, "taxa": 47.62}, {"cod": "T-2105", "nome": "IRMAOS BECKER", "last": "2026-02-26", "gmv": 296.0, "casco": 0.0, "taxa": 32.58}, {"cod": "T-2145", "nome": "REDE SARAH DE HOSPITAIS", "last": "2026-02-26", "gmv": 160.0, "casco": 0.0, "taxa": 31.33}, {"cod": "T-2102", "nome": "COGEL - CONSTRUTORA DE OBRAS G", "last": "2026-02-25", "gmv": 70.0, "casco": 0.0, "taxa": 27.81}, {"cod": "T-2198", "nome": "SPE RAJA HALLEY", "last": "2026-01-30", "gmv": 80.0, "casco": 0.0, "taxa": 15.66}, {"cod": "T-2215", "nome": "CLATHI", "last": "2026-01-30", "gmv": 32.0, "casco": 0.0, "taxa": 14.21}, {"cod": "T-2216", "nome": "DIREÇÃO SERVIÇOS", "last": "2026-01-29", "gmv": 170.0, "casco": 0.0, "taxa": 19.18}, {"cod": "T-2234", "nome": "STELLA MARIS DEPILACOES LTDA", "last": "2026-01-28", "gmv": 56.0, "casco": 0.0, "taxa": 15.18}, {"cod": "T-1058", "nome": "PREVENIR ASSISTENCIAL LTDA", "last": "2026-01-27", "gmv": 20.0, "casco": 0.0, "taxa": 13.73}, {"cod": "T-1323", "nome": "TOOL BOX", "last": "2026-01-27", "gmv": 40.0, "casco": 0.0, "taxa": 14.53}, {"cod": "T-2050", "nome": "UNIDOCK?S ASSESSORIA E LOGISTI", "last": "2026-01-22", "gmv": 17.08, "casco": 0.0, "taxa": 0.0}, {"cod": "T-1702", "nome": "MANSERV FACILITIES LTDA", "last": "2026-01-21", "gmv": 76.0, "casco": 0.0, "taxa": 15.98}, {"cod": "T-507", "nome": "NET CONTAINER", "last": "2026-01-14", "gmv": 102.0, "casco": 0.0, "taxa": 29.96}, {"cod": "T-2227", "nome": "VENN BRASIL LTDA", "last": "2026-01-09", "gmv": 48.0, "casco": 0.0, "taxa": 0.0}];
+const VT_HOJE = "2026-08-28";
+
+function showTab(name,e){
+  document.querySelectorAll('.content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(e&&e.target)e.target.classList.add('active');
+}
+
+function fmtR(v){ return 'R$ ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtPct(v){ return (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '%'; }
+
+// ===== GMV TAB =====
+(function(){
+  const li = VT_MONTHS.length - 1;
+  const kpis = document.getElementById('gmv-kpis');
+  const gmvMes = VT_GMV[li]||0, cascoMes = VT_CASCO[li]||0, taxaMes = VT_TAXA[li]||0;
+  const gmvTotalPeriodo = VT_GMV.reduce((a,b)=>a+b,0);
+  kpis.innerHTML = `
+    <div class="kpi cyan"><div class="kpi-label">GMV — ${VT_MONTHS[li]}</div><div class="kpi-value">${fmtR(gmvMes)}</div><div class="kpi-sub">Último mês</div></div>
+    <div class="kpi"><div class="kpi-label">GMV Total Período</div><div class="kpi-value">${fmtR(gmvTotalPeriodo)}</div><div class="kpi-sub">${VT_MONTHS[0]} – ${VT_MONTHS[li]}</div></div>
+    <div class="kpi amber"><div class="kpi-label">Casco — ${VT_MONTHS[li]}</div><div class="kpi-value">${fmtR(cascoMes)}</div><div class="kpi-sub">Receita de Casco</div></div>
+    <div class="kpi green"><div class="kpi-label">Taxa de Serviço — ${VT_MONTHS[li]}</div><div class="kpi-value">${fmtR(taxaMes)}</div><div class="kpi-sub">Não entra no GMV</div></div>
+  `;
+  new Chart(document.getElementById('gmvLineChart'), {
+    type:'line',
+    data:{ labels:VT_MONTHS, datasets:[
+      {label:'GMV', data:VT_GMV, borderColor:'#22d3ee', backgroundColor:'rgba(34,211,238,.12)', fill:true, tension:.3},
+      {label:'Casco', data:VT_CASCO, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.08)', fill:true, tension:.3},
+      {label:'Taxa', data:VT_TAXA, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.08)', fill:true, tension:.3},
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#e2e8f0'}}},
+      scales:{ x:{ticks:{color:'#94a3b8'}, grid:{color:'#2a2f45'}}, y:{ticks:{color:'#94a3b8'}, grid:{color:'#2a2f45'}} } }
+  });
+  const tb = document.getElementById('gmvTbody');
+  tb.innerHTML = VT_MONTHS.map((m,i)=>`<tr><td>${m}</td><td>${fmtR(VT_GMV[i])}</td><td>${fmtR(VT_CASCO[i])}</td><td>${fmtR(VT_TAXA[i])}</td><td>${fmtR(VT_TOTAL[i])}</td></tr>`).join('');
+})();
+
+// ===== RECEITA TAB =====
+(function(){
+  const li = VT_MONTHS.length - 1;
+  const kpis = document.getElementById('rec-kpis');
+  const taxaMes = VT_TAXA[li]||0, taxaTotalPeriodo = VT_TAXA.reduce((a,b)=>a+b,0);
+  kpis.innerHTML = `
+    <div class="kpi green"><div class="kpi-label">Receita (Taxa) — ${VT_MONTHS[li]}</div><div class="kpi-value">${fmtR(taxaMes)}</div><div class="kpi-sub">Último mês</div></div>
+    <div class="kpi"><div class="kpi-label">Receita Total Período</div><div class="kpi-value">${fmtR(taxaTotalPeriodo)}</div><div class="kpi-sub">${VT_MONTHS[0]} – ${VT_MONTHS[li]}</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Take Rate — ${VT_MONTHS[li]}</div><div class="kpi-value">${fmtPct(VT_TAKE_RATE[li])}</div><div class="kpi-sub">Taxa ÷ GMV</div></div>
+  `;
+  new Chart(document.getElementById('taxaLineChart'), {
+    type:'line',
+    data:{ labels:VT_MONTHS, datasets:[{label:'Taxa de Serviço', data:VT_TAXA, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.12)', fill:true, tension:.3}] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#e2e8f0'}}},
+      scales:{ x:{ticks:{color:'#94a3b8'}, grid:{color:'#2a2f45'}}, y:{ticks:{color:'#94a3b8'}, grid:{color:'#2a2f45'}} } }
+  });
+  new Chart(document.getElementById('takeRateChart'), {
+    type:'line',
+    data:{ labels:VT_MONTHS, datasets:[{label:'Take Rate %', data:VT_TAKE_RATE, borderColor:'#818cf8', backgroundColor:'rgba(129,140,248,.12)', fill:true, tension:.3}] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#e2e8f0'}}},
+      scales:{ x:{ticks:{color:'#94a3b8'}, grid:{color:'#2a2f45'}}, y:{ticks:{color:'#94a3b8'}, grid:{color:'#2a2f45'}} } }
+  });
+  const tb = document.getElementById('recTbody');
+  tb.innerHTML = VT_MONTHS.map((m,i)=>`<tr><td>${m}</td><td>${fmtR(VT_TAXA[i])}</td><td>${fmtR(VT_GMV[i])}</td><td>${fmtPct(VT_TAKE_RATE[i])}</td></tr>`).join('');
+})();
+
+// ===== CLIENTES TAB =====
+let cliFiltro = 'todos';
+function diasSemComprar(lastISO){
+  if(!lastISO) return null;
+  const last = new Date(lastISO+'T00:00:00');
+  const hoje = new Date(VT_HOJE+'T00:00:00');
+  return Math.round((hoje - last) / 86400000);
+}
+function statusCliente(dias){
+  if(dias===null) return {label:'Sem data', cls:'inativo'};
+  const ativo = dias <= 90;
+  const risco = dias > 45;
+  if(ativo && risco) return {label:'Ativo / Em Risco', cls:'ativorisco'};
+  if(ativo) return {label:'Ativo', cls:'ativo'};
+  if(risco) return {label:'Em Risco', cls:'risco'};
+  return {label:'Inativo', cls:'inativo'};
+}
+function setCliFiltro(f){
+  cliFiltro = f;
+  ['todos','ativo','risco','inativo'].forEach(k=>{
+    document.getElementById('btn-'+k).classList.toggle('active-btn', k===f);
+  });
+  renderClientes();
+}
+function renderClientes(){
+  const q = (document.getElementById('cliSearch').value||'').toLowerCase();
+  const tb = document.getElementById('cliTbody');
+  const rows = VT_CLIENTES.map(c=>{
+    const dias = diasSemComprar(c.last);
+    const st = statusCliente(dias);
+    return {...c, dias, st};
+  }).filter(c=>{
+    if(q && !(c.cod.toLowerCase().includes(q) || c.nome.toLowerCase().includes(q))) return false;
+    if(cliFiltro==='ativo') return c.st.cls==='ativo' || c.st.cls==='ativorisco';
+    if(cliFiltro==='risco') return c.st.cls==='risco' || c.st.cls==='ativorisco';
+    if(cliFiltro==='inativo') return c.st.cls==='inativo';
+    return true;
+  });
+  tb.innerHTML = rows.map(c=>`<tr>
+    <td>${c.cod}</td><td>${c.nome}</td>
+    <td>${c.last ? c.last.split('-').reverse().join('/') : '—'}</td>
+    <td>${c.dias===null?'—':c.dias}</td>
+    <td><span class="pill ${c.st.cls}">${c.st.label}</span></td>
+    <td>${fmtR(c.gmv)}</td><td>${fmtR(c.casco)}</td><td>${fmtR(c.taxa)}</td>
+  </tr>`).join('');
+}
+function exportClientesCSV(){
+  const header = ['Codigo','Nome','Ultima Compra','Dias sem comprar','Status','GMV','Casco','Taxa'];
+  const lines = [header.join(';')];
+  VT_CLIENTES.forEach(c=>{
+    const dias = diasSemComprar(c.last);
+    const st = statusCliente(dias);
+    lines.push([c.cod, '"'+c.nome.replace(/"/g,'""')+'"', c.last||'', dias===null?'':dias, st.label, c.gmv, c.casco, c.taxa].join(';'));
+  });
+  const blob = new Blob(["﻿"+lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'vtdireto_clientes.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+(function(){
+  const ativos = VT_CLIENTES.filter(c=>{const d=diasSemComprar(c.last); return d!==null && d<=90;}).length;
+  const risco = VT_CLIENTES.filter(c=>{const d=diasSemComprar(c.last); return d!==null && d>45;}).length;
+  const inativos = VT_CLIENTES.filter(c=>{const d=diasSemComprar(c.last); return d===null || d>90;}).length;
+  document.getElementById('cli-kpis').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Clientes (total)</div><div class="kpi-value">${VT_CLIENTES.length}</div></div>
+    <div class="kpi green"><div class="kpi-label">Ativos (&le;90d)</div><div class="kpi-value">${ativos}</div></div>
+    <div class="kpi amber"><div class="kpi-label">Em Risco (&gt;45d)</div><div class="kpi-value">${risco}</div><div class="kpi-sub">Pode se sobrepor a Ativo (46-90d)</div></div>
+    <div class="kpi red"><div class="kpi-label">Inativos (&gt;90d)</div><div class="kpi-value">${inativos}</div></div>
+  `;
+  setCliFiltro('todos');
+})();
+</script>
+</body>
+</html>
