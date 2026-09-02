@@ -1257,6 +1257,12 @@ function fmt(n,short=false){
   if(short){if(n>=1e6)return'R$ '+(n/1e6).toFixed(2)+'M';if(n>=1e3)return'R$ '+(n/1e3).toFixed(1)+'K';return'R$ '+n.toFixed(2);}
   return'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:0});
 }
+// fmtDec: usada pela aba "Pedidos por Cliente" (renderPedidos) mas nunca foi
+// declarada em nenhum lugar do arquivo - bug pre-existente encontrado em
+// 02/Set/2026 ao testar essa aba (ReferenceError: fmtDec is not defined).
+// Numero puro com 2 casas, sem prefixo "R$" (a celula da tabela ja tem
+// contexto de coluna monetaria pelo cabecalho).
+function fmtDec(n){ return (n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function pctVal(n,d){return d?((n/d)*100):0;}
 function deltaMoM(cur,prev,prevLabel){
   if(prev==null||prev===0)return'';
