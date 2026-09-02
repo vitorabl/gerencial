@@ -6350,9 +6350,23 @@ function cqLimpar(){
   document.getElementById('cqMoreWrap').style.display='none';
 }
 
+// Regra oficial de GMV x Receita para Pedido Externo (PE) — REGRAS_DASHBOARD.md §2/§9.2/§12:
+// - GMV: PCC conta sempre, EXCETO tipo_pedido='Deposit'. PE só conta quando
+//   BaseSK='Sem SK' — BaseSK numerado é a MESMA recarga já lançada no PCC (só é
+//   rastreada também no PE para acompanhamento externo), então contar de novo
+//   aqui duplicaria o valor.
+// - Receita (Tx Adm/Tx Sucesso/NF): TODOS os pedidos PE contam, com ou sem SK —
+//   as taxas são cobradas em todos os pedidos, só o valor de recarga/GMV é que
+//   não deve ser somado duas vezes. Por isso NÃO se aplica o mesmo filtro aqui.
+function _cqContaGmv(r){
+  if(r.origem === 'PCC') return r.tipo_pedido !== 'Deposit';
+  return (r.basesk||'').toUpperCase().includes('SEM SK');
+}
+function _cqGmvValue(r){ return _cqContaGmv(r) ? (r.valor_recarga||0) : 0; }
+
 function _cqRenderKpis(rows){
   document.getElementById('cq-count').textContent = rows.length.toLocaleString('pt-BR');
-  const gmv = rows.reduce((s,r)=>s+(r.valor_recarga||0),0);
+  const gmv = rows.reduce((s,r)=>s+_cqGmvValue(r),0);
   const tax = rows.reduce((s,r)=>s+(r.taxa_administrativa||0)+(r.taxa_sucesso||0),0);
   document.getElementById('cq-gmv').textContent = 'R$ '+gmv.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   document.getElementById('cq-tax').textContent = 'R$ '+tax.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -6453,13 +6467,16 @@ function _cqRenderTotals(rows){
   if(!rows.length){ tfoot.innerHTML=''; tfoot.style.display='none'; return; }
   const sums = {};
   CQ_NUM_FIELDS.forEach(f=> sums[f] = rows.reduce((s,r)=>s+(r[f]||0),0));
+  const gmvSum = rows.reduce((s,r)=>s+_cqGmvValue(r),0);
   tfoot.style.display='';
   // Colunas da tabela: Pedido,Origem,Empresa,CNPJ,Vínculo,Tipo,Data Pagto (7, rótulo em colspan)
-  // Valor Recarga, Projeção Saldo, Carga Realizada, Tx Adm, Tx Sucesso, Tx Aproveitamento,
-  // Tx Entrega (soma), NF, BaseSK (sem soma, célula vazia) = 16 colunas no total.
+  // GMV (soma já com a regra PE/Sem SK aplicada — ver _cqGmvValue), Projeção Saldo, Carga
+  // Realizada, Tx Adm, Tx Sucesso, Tx Aproveitamento, Tx Entrega (soma), GMV?, NF, BaseSK
+  // (sem soma, célula vazia) = 17 colunas no total.
   tfoot.innerHTML = '<tr style="font-weight:700;border-top:2px solid var(--border);background:var(--card2);">'+
     '<td colspan="7" style="text-align:right;padding:8px 10px;">TOTAL ('+rows.length.toLocaleString('pt-BR')+' pedidos):</td>'+
-    '<td style="text-align:right;">'+_cqFmt(sums.valor_recarga)+'</td>'+
+    '<td style="text-align:right;" title="Soma já aplicando a regra de GMV (PE só Sem SK)">'+_cqFmt(gmvSum)+'</td>'+
+    '<td></td>'+
     '<td style="text-align:right;">'+_cqFmt(sums.projecao_saldo)+'</td>'+
     '<td style="text-align:right;">'+_cqFmt(sums.carga_realizada)+'</td>'+
     '<td style="text-align:right;color:#818cf8;">'+_cqFmt(sums.taxa_administrativa)+'</td>'+
@@ -6473,21 +6490,28 @@ function _cqRenderTotals(rows){
 function cqExportExcel(){
   if(!_cqResults.length){ alert('Faça uma busca antes de baixar o Excel.'); return; }
   const headers = ['Pedido','Origem','Empresa','CNPJ','Vínculo','Tipo','Data Pagamento',
-    'Valor Recarga','Projeção Saldo','Carga Realizada','Tx Adm','Tx Sucesso',
+    'Valor Recarga','Conta GMV?','Projeção Saldo','Carga Realizada','Tx Adm','Tx Sucesso',
     'Tx Aproveitamento','Tx Entrega','NF','BaseSK'];
-  const aoa = [headers];
+  const aoa = [
+    ['Nota: "Conta GMV?" segue a regra oficial — PCC conta sempre (exceto tipo Deposit); '+
+     'PE só conta quando BaseSK=Sem SK (BaseSK numerado já está no PCC, contaria em dobro). '+
+     'Tx Adm/Tx Sucesso somam TODOS os pedidos PE, com ou sem SK (regra de receita).'],
+    headers
+  ];
   _cqResults.forEach(r=>{
     aoa.push([r.pedido||'', r.origem||'', r.empresa||'', r.cnpj||'', r.vinculo||'', r.tipo_pedido||'',
-      r.data_pagamento||'', r.valor_recarga??'', r.projecao_saldo??'', r.carga_realizada??'',
+      r.data_pagamento||'', r.valor_recarga??'', (_cqContaGmv(r)?'Sim':'Não'), r.projecao_saldo??'', r.carga_realizada??'',
       r.taxa_administrativa??'', r.taxa_sucesso??'', r.taxa_aproveitamento??'', r.taxa_entrega??'',
       r.nota_fiscal||'', r.basesk||'']);
   });
   const sums = {};
   CQ_NUM_FIELDS.forEach(f=> sums[f] = _cqResults.reduce((s,r)=>s+(r[f]||0),0));
+  const gmvSum = _cqResults.reduce((s,r)=>s+_cqGmvValue(r),0);
   aoa.push(['TOTAL ('+_cqResults.length+' pedidos)','','','','','','',
-    sums.valor_recarga, sums.projecao_saldo, sums.carga_realizada,
+    gmvSum, '', sums.projecao_saldo, sums.carga_realizada,
     sums.taxa_administrativa, sums.taxa_sucesso, sums.taxa_aproveitamento, sums.taxa_entrega, '', '']);
   const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges'] = [{s:{r:0,c:0}, e:{r:0,c:headers.length-1}}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
   const hoje = new Date().toISOString().slice(0,10);
@@ -6508,6 +6532,7 @@ function cqShowMore(){
       '<td>'+(r.tipo_pedido||'—')+'</td>'+
       '<td>'+(r.data_pagamento||'—')+'</td>'+
       '<td style="text-align:right;font-weight:600;">'+_cqFmt(r.valor_recarga)+'</td>'+
+      '<td style="text-align:center;">'+(_cqContaGmv(r)?'<span style="color:#10b981;">Sim</span>':'<span style="color:#94a3b8;">Não</span>')+'</td>'+
       '<td style="text-align:right;">'+_cqFmt(r.projecao_saldo)+'</td>'+
       '<td style="text-align:right;">'+_cqFmt(r.carga_realizada)+'</td>'+
       '<td style="text-align:right;color:#818cf8;">'+_cqFmt(r.taxa_administrativa)+'</td>'+
@@ -7079,17 +7104,18 @@ window.showTab=function(name,ev){
   </div>
   <div class="kpi-grid" id="cq-kpis" style="margin-bottom:16px;">
     <div class="kpi cyan"><div class="kpi-label">Pedidos encontrados</div><div class="kpi-value" id="cq-count">—</div><div class="kpi-sub">resultado do filtro</div></div>
-    <div class="kpi green"><div class="kpi-label">Valor Recarga (soma)</div><div class="kpi-value" id="cq-gmv">—</div><div class="kpi-sub">do resultado filtrado</div></div>
+    <div class="kpi green"><div class="kpi-label">GMV (soma)</div><div class="kpi-value" id="cq-gmv">—</div><div class="kpi-sub">regra oficial: PE só "Sem SK"</div></div>
     <div class="kpi amber"><div class="kpi-label">Tx Adm + Tx Sucesso (soma)</div><div class="kpi-value" id="cq-tax">—</div><div class="kpi-sub">do resultado filtrado</div></div>
   </div>
   <div class="info-note">ℹ️ A busca carrega sob demanda só os meses necessários (a base completa de 56 mil pedidos não fica embutida na página). Sem pedido/empresa/CNPJ/vínculo preenchidos, o período fica limitado a 6 meses por consulta; usando algum desses filtros, até 12 meses de atividade correspondente — restrinja o período De/Até para consultar além disso. "Baixar Excel" exporta todo o resultado filtrado (não só o que está na tela).</div>
+  <div class="info-note" style="margin-top:8px;">⚠️ <strong>Regra de GMV x Receita (Pedido Externo):</strong> o KPI "Valor Recarga (soma)" e o total da tabela seguem a regra oficial — pedidos PCC contam sempre (exceto tipo "Deposit"); pedidos PE só contam para o GMV quando <strong>BaseSK = "Sem SK"</strong>, porque um BaseSK numerado é a <strong>mesma recarga</strong> já lançada no PCC (rastreada também no PE), e somar de novo aqui duplicaria o valor. Já <strong>Tx Adm e Tx Sucesso somam TODOS os pedidos PE</strong>, com ou sem SK — as taxas são cobradas em todos os pedidos, só o valor de recarga/GMV não pode ser contado duas vezes. A coluna "Conta GMV?" mostra isso linha a linha.</div>
   <div class="table-card">
     <h3>📋 Pedidos</h3>
     <div class="table-scroll" style="max-height:600px;overflow:auto;">
       <table>
         <thead><tr>
           <th class="col-fix th">Pedido</th><th>Origem</th><th class="col-fix th">Empresa</th><th>CNPJ</th><th>Vínculo</th><th>Tipo</th>
-          <th>Data Pagto</th><th style="text-align:right;">Valor Recarga</th>
+          <th>Data Pagto</th><th style="text-align:right;">Valor Recarga</th><th title="Conta como GMV pela regra oficial? PE só conta se BaseSK='Sem SK' (numerado já está no PCC)">Conta GMV?</th>
           <th style="text-align:right;">Projeção Saldo</th><th style="text-align:right;">Carga Realizada</th>
           <th style="text-align:right;">Tx Adm</th><th style="text-align:right;">Tx Sucesso</th>
           <th style="text-align:right;">Tx Aproveitamento</th><th style="text-align:right;">Tx Entrega</th>
