@@ -6275,6 +6275,7 @@ let _cqResults = [];
 let _cqShown = 0;
 const CQ_PAGE = 100;
 const CQ_MAX_MONTHS_WITHOUT_FILTER = 6;
+const CQ_MAX_MONTHS_EMPRESA = 12;
 
 function _cqMesLabel(ym){
   const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -6363,6 +6364,12 @@ async function cqBuscar(){
     mesesAlvo = [...setMeses].filter(m=>m>=de && m<=ate).sort();
     if(mesesAlvo.length===0){
       status.textContent='Nenhuma empresa encontrada com esse nome no período selecionado.';
+      _cqResults=[]; document.getElementById('cqTbody').innerHTML='';
+      _cqRenderKpis([]); document.getElementById('cqMoreWrap').style.display='none';
+      return;
+    }
+    if(mesesAlvo.length > CQ_MAX_MONTHS_EMPRESA){
+      status.textContent = `Essa empresa tem atividade em ${mesesAlvo.length} meses no período selecionado (máx. ${CQ_MAX_MONTHS_EMPRESA} por consulta). Restrinja o período De/Até para reduzir.`;
       _cqResults=[]; document.getElementById('cqTbody').innerHTML='';
       _cqRenderKpis([]); document.getElementById('cqMoreWrap').style.display='none';
       return;
@@ -6980,7 +6987,7 @@ window.showTab=function(name,ev){
     <div class="kpi green"><div class="kpi-label">Valor Recarga (soma)</div><div class="kpi-value" id="cq-gmv">—</div><div class="kpi-sub">do resultado filtrado</div></div>
     <div class="kpi amber"><div class="kpi-label">Tx Adm + Tx Sucesso (soma)</div><div class="kpi-value" id="cq-tax">—</div><div class="kpi-sub">do resultado filtrado</div></div>
   </div>
-  <div class="info-note">ℹ️ A busca carrega sob demanda só os meses necessários (a base completa de 56 mil pedidos não fica embutida na página). Sem pedido/empresa preenchidos, o período fica limitado a 6 meses por consulta para manter o site leve — busque por pedido ou empresa para consultar um intervalo maior.</div>
+  <div class="info-note">ℹ️ A busca carrega sob demanda só os meses necessários (a base completa de 56 mil pedidos não fica embutida na página). Sem pedido/empresa preenchidos, o período fica limitado a 6 meses por consulta; buscando por empresa, até 12 meses de atividade dessa empresa — restrinja o período De/Até para consultar além disso.</div>
   <div class="table-card">
     <h3>📋 Pedidos</h3>
     <div class="table-scroll" style="max-height:600px;overflow:auto;">
