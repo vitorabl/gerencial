@@ -6166,12 +6166,18 @@ function exportClientCSV(){
 
 
 // ===================== PEDIDOS POR CLIENTE TAB =====================
-(function(){
-  // Populate vendedor filter
+// Corrigido em 02/Set/2026: este bloco roda no meio do parse do documento,
+// antes do HTML da aba "Pedidos por Cliente" (mais abaixo) existir no DOM —
+// getElementById('pedVend') retornava null e o .appendChild() lançava um erro
+// não tratado, interrompendo TODO o restante deste bloco <script> (inclusive
+// o wiring de outras abas declarado depois). Adiar para DOMContentLoaded
+// garante que o <select> já exista quando este código rodar.
+document.addEventListener('DOMContentLoaded', function(){
   const vends = [...new Set(_PC.map(r=>r[3]).filter(v=>v))].sort();
   const vSel = document.getElementById('pedVend');
+  if(!vSel) return;
   vends.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; vSel.appendChild(o); });
-})();
+});
 
 let cPedLine = null;
 
