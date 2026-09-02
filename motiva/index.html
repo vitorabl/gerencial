@@ -330,6 +330,9 @@ function togglePwd(){
   <div class="tab" onclick="showTab('quinzena',event)">🔢 Quinzena</div>
   <div class="tab" onclick="showTab('resumo',event)">📊 Resumo</div>
   <div class="tab" onclick="showTab('estados',event)">🗺️ GMV por Estado</div>
+  <div class="tab" onclick="showTab('pedidos',event)">🧾 Pedidos por Cliente</div>
+  <div class="tab" onclick="showTab('consulta',event)">🔎 Consulta de Pedidos</div>
+  <div class="tab" onclick="showTab('downloads',event)">⬇️ Downloads</div>
 </div>
 
 <!-- ===== GMV ===== -->
@@ -6255,6 +6258,174 @@ window.showTab = function(name,e){
   if(name==='pedidos') renderPedidos();
 };
 
+// ===================== CONSULTA DE PEDIDOS (busca sob demanda, sem embutir a base) =====================
+// Dados completos (56 mil pedidos, PCC+PE) ficam particionados por mes em
+// data/consulta/AAAA-MM.json + data/consulta/index.json (indice pedido->mes,
+// empresa->[meses]). Nada disso e carregado no boot da pagina - so quando o
+// usuario abre esta aba (index.json) e clica em Buscar (meses relevantes).
+let _cqIndex = null;
+const _cqMonthCache = {};
+let _cqResults = [];
+let _cqShown = 0;
+const CQ_PAGE = 100;
+const CQ_MAX_MONTHS_WITHOUT_FILTER = 6;
+
+function _cqMesLabel(ym){
+  const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const p=ym.split('-'); return MESES[parseInt(p[1],10)-1]+'/'+p[0].slice(2);
+}
+
+async function _cqLoadIndex(){
+  if(_cqIndex) return _cqIndex;
+  const status=document.getElementById('cqStatus');
+  if(status) status.textContent='Carregando índice...';
+  try{
+    const r = await fetch('data/consulta/index.json');
+    _cqIndex = await r.json();
+  }catch(e){
+    if(status) status.textContent='Erro ao carregar índice de pedidos.';
+    return null;
+  }
+  const sf=document.getElementById('cqFrom'), st=document.getElementById('cqTo');
+  if(sf && st){
+    sf.innerHTML=''; st.innerHTML='';
+    _cqIndex.meses.forEach(m=>{
+      sf.innerHTML+=`<option value="${m}">${_cqMesLabel(m)}</option>`;
+      st.innerHTML+=`<option value="${m}">${_cqMesLabel(m)}</option>`;
+    });
+    sf.value=_cqIndex.meses[0];
+    st.value=_cqIndex.meses[_cqIndex.meses.length-1];
+  }
+  if(status) status.textContent='';
+  return _cqIndex;
+}
+
+async function _cqFetchMonth(m){
+  if(_cqMonthCache[m]) return _cqMonthCache[m];
+  const r = await fetch(`data/consulta/${m}.json`);
+  const data = await r.json();
+  _cqMonthCache[m]=data;
+  return data;
+}
+
+function cqLimpar(){
+  document.getElementById('cqPedido').value='';
+  document.getElementById('cqEmpresa').value='';
+  if(_cqIndex){
+    document.getElementById('cqFrom').value=_cqIndex.meses[0];
+    document.getElementById('cqTo').value=_cqIndex.meses[_cqIndex.meses.length-1];
+  }
+  _cqResults=[]; _cqShown=0;
+  document.getElementById('cqTbody').innerHTML='';
+  document.getElementById('cq-count').textContent='—';
+  document.getElementById('cq-gmv').textContent='—';
+  document.getElementById('cq-tax').textContent='—';
+  document.getElementById('cqStatus').textContent='';
+  document.getElementById('cqMoreWrap').style.display='none';
+}
+
+function _cqRenderKpis(rows){
+  document.getElementById('cq-count').textContent = rows.length.toLocaleString('pt-BR');
+  const gmv = rows.reduce((s,r)=>s+(r.valor_recarga||0),0);
+  const tax = rows.reduce((s,r)=>s+(r.taxa_administrativa||0)+(r.taxa_sucesso||0),0);
+  document.getElementById('cq-gmv').textContent = 'R$ '+gmv.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('cq-tax').textContent = 'R$ '+tax.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function _cqFmt(v){
+  if(v===null||v===undefined||v==='') return '—';
+  if(typeof v==='number') return v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return v;
+}
+
+async function cqBuscar(){
+  const idx = await _cqLoadIndex();
+  if(!idx) return;
+  const de = document.getElementById('cqFrom').value;
+  const ate = document.getElementById('cqTo').value;
+  const pedido = document.getElementById('cqPedido').value.trim();
+  const empresa = document.getElementById('cqEmpresa').value.trim().toLowerCase();
+  const status = document.getElementById('cqStatus');
+
+  let mesesAlvo;
+  if(pedido && idx.pedidos[pedido]){
+    mesesAlvo = [idx.pedidos[pedido]];
+  } else if(empresa){
+    const nomes = Object.keys(idx.empresas).filter(n=>n.toLowerCase().includes(empresa));
+    const setMeses = new Set();
+    nomes.forEach(n=>idx.empresas[n].forEach(m=>setMeses.add(m)));
+    mesesAlvo = [...setMeses].filter(m=>m>=de && m<=ate).sort();
+    if(mesesAlvo.length===0){
+      status.textContent='Nenhuma empresa encontrada com esse nome no período selecionado.';
+      _cqResults=[]; document.getElementById('cqTbody').innerHTML='';
+      _cqRenderKpis([]); document.getElementById('cqMoreWrap').style.display='none';
+      return;
+    }
+  } else {
+    mesesAlvo = idx.meses.filter(m=>m>=de && m<=ate);
+    if(mesesAlvo.length > CQ_MAX_MONTHS_WITHOUT_FILTER){
+      status.textContent = `Período de ${mesesAlvo.length} meses é grande demais sem filtro de pedido/empresa (máx. ${CQ_MAX_MONTHS_WITHOUT_FILTER} meses por consulta). Restrinja o período ou busque por um pedido/empresa específico.`;
+      _cqResults=[]; document.getElementById('cqTbody').innerHTML='';
+      _cqRenderKpis([]); document.getElementById('cqMoreWrap').style.display='none';
+      return;
+    }
+  }
+
+  status.textContent = `Carregando ${mesesAlvo.length} mês(es)...`;
+  let chunks;
+  try{
+    chunks = await Promise.all(mesesAlvo.map(_cqFetchMonth));
+  }catch(e){
+    status.textContent = 'Erro ao carregar dados do período.';
+    return;
+  }
+  let rows = chunks.flat();
+
+  if(pedido) rows = rows.filter(r=>String(r.pedido)===pedido);
+  if(empresa) rows = rows.filter(r=>(r.empresa||'').toLowerCase().includes(empresa));
+  rows = rows.filter(r=>r.mes_pagamento>=de && r.mes_pagamento<=ate);
+
+  _cqResults = rows;
+  _cqShown = 0;
+  status.textContent = '';
+  _cqRenderKpis(rows);
+  document.getElementById('cqTbody').innerHTML='';
+  cqShowMore();
+}
+
+function cqShowMore(){
+  const tbody = document.getElementById('cqTbody');
+  const slice = _cqResults.slice(_cqShown, _cqShown+CQ_PAGE);
+  slice.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML =
+      '<td class="col-fix">'+(r.pedido||'—')+'</td>'+
+      '<td>'+r.origem+'</td>'+
+      '<td class="col-fix"><strong>'+(r.empresa||'—')+'</strong></td>'+
+      '<td style="color:#94a3b8;">'+(r.cnpj||'—')+'</td>'+
+      '<td>'+(r.tipo_pedido||'—')+'</td>'+
+      '<td>'+(r.data_pagamento||'—')+'</td>'+
+      '<td style="text-align:right;font-weight:600;">'+_cqFmt(r.valor_recarga)+'</td>'+
+      '<td style="text-align:right;">'+_cqFmt(r.projecao_saldo)+'</td>'+
+      '<td style="text-align:right;">'+_cqFmt(r.carga_realizada)+'</td>'+
+      '<td style="text-align:right;color:#818cf8;">'+_cqFmt(r.taxa_administrativa)+'</td>'+
+      '<td style="text-align:right;color:#22d3ee;">'+_cqFmt(r.taxa_sucesso)+'</td>'+
+      '<td style="text-align:right;">'+_cqFmt(r.taxa_aproveitamento)+'</td>'+
+      '<td style="text-align:right;">'+_cqFmt(r.taxa_entrega)+'</td>'+
+      '<td style="text-align:right;color:#f59e0b;">'+_cqFmt(r.nota_fiscal)+'</td>'+
+      '<td>'+(r.basesk||'—')+'</td>';
+    tbody.appendChild(tr);
+  });
+  _cqShown += slice.length;
+  document.getElementById('cqMoreWrap').style.display = (_cqShown < _cqResults.length) ? '' : 'none';
+}
+
+const _cqOrigShowTab = window.showTab;
+window.showTab = function(name,e){
+  _cqOrigShowTab(name,e);
+  if(name==='consulta') _cqLoadIndex();
+};
+
 </script>
 
 <!-- ===== RESUMO COMPARATIVO ===== -->
@@ -6781,6 +6952,50 @@ window.showTab=function(name,ev){
 </div>
 
 
+<!-- ===== CONSULTA DE PEDIDOS ===== -->
+<div class="content" id="tab-consulta">
+  <div class="filter-bar" style="flex-wrap:wrap;gap:10px;">
+    <label>📅 De:</label>
+    <select id="cqFrom"></select>
+    <label>Até:</label>
+    <select id="cqTo"></select>
+    <label>Pedido:</label>
+    <input type="text" id="cqPedido" placeholder="Código exato..."
+      style="background:var(--card2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:7px;font-size:12px;width:140px;outline:none;">
+    <label>Empresa:</label>
+    <input type="text" id="cqEmpresa" placeholder="Nome ou parte do nome..."
+      style="background:var(--card2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:7px;font-size:12px;width:220px;outline:none;">
+    <button class="filter-btn" onclick="cqBuscar()">🔍 Buscar</button>
+    <button class="filter-btn" onclick="cqLimpar()">Limpar</button>
+    <span id="cqStatus" style="color:var(--muted);font-size:12px;margin-left:8px;"></span>
+  </div>
+  <div class="kpi-grid" id="cq-kpis" style="margin-bottom:16px;">
+    <div class="kpi cyan"><div class="kpi-label">Pedidos encontrados</div><div class="kpi-value" id="cq-count">—</div><div class="kpi-sub">resultado do filtro</div></div>
+    <div class="kpi green"><div class="kpi-label">Valor Recarga (soma)</div><div class="kpi-value" id="cq-gmv">—</div><div class="kpi-sub">do resultado filtrado</div></div>
+    <div class="kpi amber"><div class="kpi-label">Tx Adm + Tx Sucesso (soma)</div><div class="kpi-value" id="cq-tax">—</div><div class="kpi-sub">do resultado filtrado</div></div>
+  </div>
+  <div class="info-note">ℹ️ A busca carrega sob demanda só os meses necessários (a base completa de 56 mil pedidos não fica embutida na página). Sem pedido/empresa preenchidos, o período fica limitado a 6 meses por consulta para manter o site leve — busque por pedido ou empresa para consultar um intervalo maior.</div>
+  <div class="table-card">
+    <h3>📋 Pedidos</h3>
+    <div class="table-scroll" style="max-height:600px;overflow:auto;">
+      <table>
+        <thead><tr>
+          <th class="col-fix th">Pedido</th><th>Origem</th><th class="col-fix th">Empresa</th><th>CNPJ</th><th>Tipo</th>
+          <th>Data Pagto</th><th style="text-align:right;">Valor Recarga</th>
+          <th style="text-align:right;">Projeção Saldo</th><th style="text-align:right;">Carga Realizada</th>
+          <th style="text-align:right;">Tx Adm</th><th style="text-align:right;">Tx Sucesso</th>
+          <th style="text-align:right;">Tx Aproveitamento</th><th style="text-align:right;">Tx Entrega</th>
+          <th style="text-align:right;">NF</th><th>BaseSK</th>
+        </tr></thead>
+        <tbody id="cqTbody"></tbody>
+      </table>
+    </div>
+    <div id="cqMoreWrap" style="text-align:center;margin-top:10px;display:none;">
+      <button class="filter-btn" onclick="cqShowMore()">Mostrar mais 100</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== DOWNLOADS ===== -->
 <div class="content" id="tab-downloads">
   <div style="margin-bottom:24px;">
@@ -6789,8 +7004,8 @@ window.showTab=function(name,ev){
   <div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr));">
     <div class="kpi" style="padding:28px;">
       <div class="kpi-label">📦 Pedido de Carga Completo (VT)</div>
-      <div class="kpi-value" style="font-size:18px;margin:12px 0;">48.492 registros</div>
-      <div class="kpi-sub" style="margin-bottom:16px;">Código, Empresa, CNPJ, Data, Mês, Operadora, Valor Recarga, Taxas, NF, Vendedor</div>
+      <div class="kpi-value" style="font-size:18px;margin:12px 0;" id="dl-vt-count">54.297 registros</div>
+      <div class="kpi-sub" style="margin-bottom:16px;">Código, Empresa, CNPJ, Data, Mês, Operadora, Valor Recarga, Projeção Saldo, Carga Realizada, Taxas, NF, Vendedor</div>
       <a href="data/pedidos_vt.xlsx" download="pedidos_vt.xlsx"
         style="display:inline-block;background:var(--accent);color:white;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
         ⬇️ Baixar Excel
@@ -6798,8 +7013,8 @@ window.showTab=function(name,ev){
     </div>
     <div class="kpi green" style="padding:28px;">
       <div class="kpi-label">🥗 Pedido Externo (PAT)</div>
-      <div class="kpi-value" style="font-size:18px;margin:12px 0;">1.672 registros</div>
-      <div class="kpi-sub" style="margin-bottom:16px;">Pedido, Cliente, CNPJ, Operadora, Data, Mês, Valor Recarga, Taxas, NF, BaseSK, Vendedor</div>
+      <div class="kpi-value" style="font-size:18px;margin:12px 0;" id="dl-pat-count">1.907 registros</div>
+      <div class="kpi-sub" style="margin-bottom:16px;">Pedido, Cliente, CNPJ, Operadora, Data, Mês, Valor Recarga, Projeção Saldo, Taxas, NF, BaseSK, Vendedor</div>
       <a href="data/pedidos_pat.xlsx" download="pedidos_pat.xlsx"
         style="display:inline-block;background:#10b981;color:white;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
         ⬇️ Baixar Excel
