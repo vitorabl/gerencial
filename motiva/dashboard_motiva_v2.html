@@ -75,6 +75,12 @@
   select:focus { border-color:var(--accent); }
   .filter-btn { background:var(--card2);border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:7px;font-size:11px;cursor:pointer;transition:all .15s; }
   .filter-btn:hover { color:var(--text);border-color:var(--accent); }
+  .gmv-subtabs { display:flex;gap:8px;margin-bottom:16px; }
+  .gmv-subtab { background:var(--card2);border:1px solid var(--border);color:var(--muted);padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s; }
+  .gmv-subtab:hover { color:var(--text);border-color:var(--accent); }
+  .gmv-subtab.active { color:var(--accent2);border-color:var(--accent2);background:rgba(34,211,238,.1); }
+  .gmv-subview { display:none; }
+  .gmv-subview.active { display:block; }
   .table-card { background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px; }
   .table-card h3 { font-size:14px;font-weight:600;padding:14px 18px;border-bottom:1px solid var(--border); }
   table { width:100%;border-collapse:collapse; }
@@ -337,6 +343,11 @@ function togglePwd(){
 
 <!-- ===== GMV ===== -->
 <div class="content active" id="tab-gmv">
+  <div class="gmv-subtabs">
+    <button class="gmv-subtab active" onclick="showGmvSub('geral',event)">📈 Visão Geral</button>
+    <button class="gmv-subtab" onclick="showGmvSub('grupos',event)">🏢 Top 10 Grupos</button>
+  </div>
+  <div id="gmv-sub-geral" class="gmv-subview active">
   <div class="filter-bar">
     <label>📅 Período GMV:</label>
     <select id="gFrom" onchange="applyGmv()"></select>
@@ -375,7 +386,225 @@ function togglePwd(){
       <tbody id="gmvSegBody"></tbody>
     </table></div>
   </div>
+  </div>
+
+  <div id="gmv-sub-grupos" class="gmv-subview">
+    <div id="grupos-info" style="margin-bottom:6px;"></div>
+    <div class="filter-bar" style="flex-wrap:wrap;gap:10px;">
+      <label>📅 Período Top 10:</label>
+      <select id="tgFrom" onchange="renderGruposTab()"></select>
+      <span style="color:var(--muted);font-size:12px;">até</span>
+      <select id="tgTo" onchange="renderGruposTab()"></select>
+      <button class="filter-btn" onclick="resetGruposPeriodo()">Limpar</button>
+      <button onclick="exportarExcelGrupos()" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);color:#818cf8;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">⬇️ Baixar Excel</button>
+    </div>
+    <div style="overflow-x:auto;margin-top:10px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:720px;">
+        <thead id="grupos-thead" style="position:sticky;top:0;z-index:2;"></thead>
+        <tbody id="grupos-tbody"></tbody>
+        <tfoot id="grupos-tfoot"></tfoot>
+      </table>
+    </div>
+    <div id="grupos-summary" style="margin-top:14px;font-size:11px;color:var(--muted);line-height:1.8;"></div>
+  </div>
 </div>
+
+<script>
+(function(){
+// ===== TOP 10 GRUPOS ECONOMICOS POR GMV (sub-aba dentro de GMV) =====
+// Reaproveita _GMVSEG (GMV por CNPJ/mes, Regra de GMV validada — mesma fonte que
+// reconcilia com gmvVT oficial) + VINCULO_MAP (CNPJ -> grupo economico, curado
+// manualmente). Periodo AJUSTAVEL via filtro proprio (📅 Período Top 10, selects
+// tgFrom/tgTo) — default Jan/26 ate lastDataIdx (ultimo mes completo, recalculado
+// automaticamente a cada atualizacao do dashboard, nao hardcoded). Adicionado filtro
+// em 09/Set/2026 a pedido do usuario, no mesmo padrao do "📅 Período GMV" da Visão
+// Geral. "Ativo" = GMV>0 no ultimo mes do periodo selecionado. Empresas sem grupo
+// definido em VINCULO_MAP aparecem individualmente pelo proprio nome. GMV Medio = GMV
+// do periodo dividido pela QUANTIDADE DE MESES do periodo (media mensal), nao pela
+// quantidade de empresas do grupo. Metodologia validada em planilha
+// (Top10_Grupos_GMV_Motiva_Ativos.xlsx) reproduzindo os valores historicos Jan-Jun/26
+// centavo a centavo antes de entrar no dashboard.
+var _tgInit=false;
+
+function computeGruposTop10(iStart,iEnd){
+  if(typeof _GMVSEG==='undefined'||typeof months==='undefined') return null;
+  if(typeof iStart!=='number') iStart=months.indexOf('Jan/26');
+  if(iStart<0) iStart=0;
+  if(typeof iEnd!=='number') iEnd=(typeof lastDataIdx!=='undefined')?lastDataIdx:months.length-1;
+  if(iStart>iEnd) iStart=iEnd;
+  var nMeses=iEnd-iStart+1;
+  var vmap={}; try{ vmap=VINCULO_MAP||{}; }catch(e){}
+
+  var periodSum={}, nomeByCnpj={}, activeCnpjs={};
+  _GMVSEG.forEach(function(e){
+    var cnpj=e[0], nome=e[1], arr=e[3];
+    var s=0; for(var i=iStart;i<=iEnd;i++) s+=(arr[i]||0);
+    periodSum[cnpj]=s; nomeByCnpj[cnpj]=nome;
+    if((arr[iEnd]||0)>0) activeCnpjs[cnpj]=true;
+  });
+
+  var groupTotal={}, groupMembers={}, standalone=[];
+  Object.keys(activeCnpjs).forEach(function(cnpj){
+    var ps=periodSum[cnpj]||0;
+    var grp=vmap[cnpj];
+    if(grp){
+      groupTotal[grp]=(groupTotal[grp]||0)+ps;
+      if(ps>0){ groupMembers[grp]=groupMembers[grp]||{}; groupMembers[grp][cnpj]=true; }
+    } else if(ps>0){
+      standalone.push({label:nomeByCnpj[cnpj], n:1, gmv:ps});
+    }
+  });
+
+  var rows=Object.keys(groupTotal).map(function(g){
+    return {label:g, n:Object.keys(groupMembers[g]||{}).length, gmv:groupTotal[g]};
+  }).concat(standalone);
+  rows.sort(function(a,b){return b.gmv-a.gmv;});
+
+  var totalBase=rows.reduce(function(s,r){return s+r.gmv;},0);
+  return {
+    rows:rows, top10:rows.slice(0,10), totalBase:totalBase, qtdGrupos:rows.length,
+    totalClientesBase:_GMVSEG.length, qtdAtivos:Object.keys(activeCnpjs).length,
+    iStart:iStart, iEnd:iEnd, nMeses:nMeses
+  };
+}
+
+function initGruposFiltro(){
+  var sf=document.getElementById('tgFrom'), st=document.getElementById('tgTo');
+  if(!sf||!st||typeof months==='undefined') return;
+  var ldi=(typeof lastDataIdx!=='undefined')?lastDataIdx:months.length-1;
+  var defStart=months.indexOf('Jan/26'); if(defStart<0) defStart=0;
+  sf.innerHTML=''; st.innerHTML='';
+  for(var i=0;i<=ldi;i++){
+    sf.innerHTML+='<option value="'+i+'">'+months[i]+'</option>';
+    st.innerHTML+='<option value="'+i+'">'+months[i]+'</option>';
+  }
+  sf.value=defStart; st.value=ldi;
+  _tgInit=true;
+}
+
+window.resetGruposPeriodo=function(){
+  var sf=document.getElementById('tgFrom'), st=document.getElementById('tgTo');
+  if(!sf||!st||typeof months==='undefined') return;
+  var ldi=(typeof lastDataIdx!=='undefined')?lastDataIdx:months.length-1;
+  var defStart=months.indexOf('Jan/26'); if(defStart<0) defStart=0;
+  sf.value=defStart; st.value=ldi;
+  renderGruposTab();
+};
+
+window.showGmvSub=function(name,ev){
+  document.querySelectorAll('#tab-gmv .gmv-subview').forEach(function(el){el.classList.remove('active');});
+  document.querySelectorAll('#tab-gmv .gmv-subtab').forEach(function(el){el.classList.remove('active');});
+  var view=document.getElementById('gmv-sub-'+name);
+  if(view) view.classList.add('active');
+  if(ev&&ev.target) ev.target.classList.add('active');
+  if(name==='grupos'){
+    if(!_tgInit) initGruposFiltro();
+    renderGruposTab();
+  }
+};
+
+window.renderGruposTab=function(){
+  var sf=document.getElementById('tgFrom'), st=document.getElementById('tgTo');
+  var iStart, iEnd;
+  if(sf&&st&&sf.value!==''&&st.value!==''){
+    iStart=parseInt(sf.value); iEnd=parseInt(st.value);
+    if(isNaN(iStart)||isNaN(iEnd)) { iStart=undefined; iEnd=undefined; }
+    else if(iStart>iEnd){ iEnd=iStart; st.value=String(iEnd); }
+  }
+  var d=computeGruposTop10(iStart,iEnd);
+  var info=document.getElementById('grupos-info');
+  if(!d){ info.innerHTML='<div style="padding:20px;color:var(--muted);">Dados não disponíveis.</div>'; return; }
+  var mStart=months[d.iStart], mEnd=months[d.iEnd];
+
+  info.innerHTML=
+    '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;">🏢 Top 10 Grupos Econômicos por GMV (Clientes Ativos)</div>'+
+    '<div style="font-size:11px;color:var(--muted);">Período: '+mStart+' a '+mEnd+' ('+d.nMeses+' meses) — VT, Pedido de Carga Completo + Pedido Externo</div>'+
+    '<div style="font-size:11px;color:var(--muted);">Considera apenas empresas com compra em '+mEnd+' (último mês do período) — '+d.qtdAtivos+' empresas ativas de '+d.totalClientesBase+' na base.</div>'+
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Empresas sem grupo econômico definido são exibidas individualmente. GMV Médio = GMV do período ÷ '+d.nMeses+' meses.</div>';
+
+  var top10sum=d.top10.reduce(function(s,r){return s+r.gmv;},0);
+  document.getElementById('grupos-thead').innerHTML=
+    '<tr>'+['Rank','Grupo Econômico','Empresas no Grupo','GMV (R$)','GMV Médio (R$)','% do Top 10'].map(function(h,i){
+      return '<th style="padding:6px 8px;text-align:'+(i===1?'left':(i===0||i===2?'center':'right'))+
+        ';background:var(--card2);border-bottom:2px solid var(--border);white-space:nowrap;">'+h+'</th>';
+    }).join('')+'</tr>';
+
+  document.getElementById('grupos-tbody').innerHTML=d.top10.map(function(r,i){
+    var gm=d.nMeses?r.gmv/d.nMeses:r.gmv;
+    var pct=top10sum?(r.gmv/top10sum*100):0;
+    return '<tr style="border-bottom:1px solid var(--border);">'+
+      '<td style="padding:5px 8px;text-align:center;">'+(i+1)+'</td>'+
+      '<td style="padding:5px 8px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.label+'">'+r.label+'</td>'+
+      '<td style="padding:5px 8px;text-align:center;">'+r.n+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">'+fmt(r.gmv)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">'+fmt(gm)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">'+pct.toFixed(1)+'%</td>'+
+    '</tr>';
+  }).join('');
+
+  var totalN=d.top10.reduce(function(s,r){return s+r.n;},0);
+  var gmTotal=d.nMeses?top10sum/d.nMeses:top10sum;
+  document.getElementById('grupos-tfoot').innerHTML=
+    '<tr style="font-weight:700;border-top:2px solid var(--border);">'+
+      '<td></td><td style="padding:5px 8px;">Total Top 10</td>'+
+      '<td style="padding:5px 8px;text-align:center;">'+totalN+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">'+fmt(top10sum)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">'+fmt(gmTotal)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">100,0%</td>'+
+    '</tr>';
+
+  var pctTopBase=d.totalBase?(top10sum/d.totalBase*100):0;
+  document.getElementById('grupos-summary').innerHTML=
+    '<div>Total geral da base (grupos/empresas ativas em '+mEnd+' com GMV no período): <b style="color:var(--text);">'+fmt(d.totalBase)+'</b></div>'+
+    '<div>Qtd. total de grupos/empresas ativos distintos no período: '+d.qtdGrupos+'</div>'+
+    '<div>% do Top 10 sobre o total geral da base (ativos): <b style="color:var(--text);">'+pctTopBase.toFixed(1)+'%</b></div>';
+
+  window._gruposData=d;
+};
+
+window.exportarExcelGrupos=function(){
+  try{
+    if(typeof XLSX==='undefined'){ alert('A biblioteca de exportação para Excel ainda não carregou. Aguarde alguns segundos e tente novamente.'); return; }
+    var d=window._gruposData||computeGruposTop10();
+    if(!d) return;
+    var mStart=months[d.iStart], mEnd=months[d.iEnd];
+    var top10sum=d.top10.reduce(function(s,r){return s+r.gmv;},0);
+    var totalN=d.top10.reduce(function(s,r){return s+r.n;},0);
+    var aoa=[
+      ['Motiva Benefícios — Top 10 Grupos Econômicos por GMV (Clientes Ativos)'],
+      ['Período: '+mStart+' a '+mEnd+' ('+d.nMeses+' meses) — VT, Pedido de Carga Completo + Pedido Externo'],
+      ['Considera apenas empresas com compra em '+mEnd+' (último mês do período) — '+d.qtdAtivos+' empresas ativas de '+d.totalClientesBase+' na base.'],
+      ['Empresas sem grupo econômico definido são exibidas individualmente. GMV Médio = GMV do período ÷ '+d.nMeses+' meses.'],
+      [],
+      ['Rank','Grupo Econômico','Empresas no Grupo','GMV (R$)','GMV Médio (R$)','% do Top 10']
+    ];
+    d.top10.forEach(function(r,i){
+      var gm=d.nMeses?r.gmv/d.nMeses:r.gmv;
+      aoa.push([i+1, r.label, r.n, Math.round(r.gmv*100)/100, Math.round(gm*100)/100,
+        top10sum?Math.round(r.gmv/top10sum*1000)/1000:0]);
+    });
+    var gmTotal=d.nMeses?top10sum/d.nMeses:top10sum;
+    aoa.push(['','Total Top 10', totalN, Math.round(top10sum*100)/100,
+      Math.round(gmTotal*100)/100, 1]);
+    aoa.push([]);
+    aoa.push(['','Total geral da base (grupos/empresas ativas em '+mEnd+' com GMV no período)','','',
+      Math.round(d.totalBase*100)/100]);
+    aoa.push(['','Qtd. total de grupos/empresas ativos distintos no período: '+d.qtdGrupos]);
+    aoa.push(['','% do Top 10 sobre o total geral da base (ativos)','','','',
+      d.totalBase?Math.round(top10sum/d.totalBase*1000)/1000:0]);
+
+    var wb=XLSX.utils.book_new();
+    var ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:8},{wch:48},{wch:18},{wch:20},{wch:20},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Top 10 Grupos - GMV');
+    XLSX.writeFile(wb, 'Top10_Grupos_GMV_Motiva_Ativos_'+mEnd.replace(/\//g,'-')+'.xlsx');
+  } catch(e){
+    console.error(e);
+    alert('Erro ao gerar o Excel: '+e.message);
+  }
+};
+})();
+</script>
 
 <!-- ===== RECEITAS ===== -->
 <div class="content" id="tab-receitas">
