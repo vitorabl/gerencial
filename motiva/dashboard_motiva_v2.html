@@ -436,10 +436,13 @@ function computeGruposTop10(iStart,iEnd){
   var vmap={}; try{ vmap=VINCULO_MAP||{}; }catch(e){}
 
   var periodSum={}, nomeByCnpj={}, activeCnpjs={};
+  var totalGmvPeriodo=0; // GMV de TODOS os clientes no periodo (ativos ou nao) — mesma
+                          // base da aba GMV, usado para reconciliar o total geral
   _GMVSEG.forEach(function(e){
     var cnpj=e[0], nome=e[1], arr=e[3];
     var s=0; for(var i=iStart;i<=iEnd;i++) s+=(arr[i]||0);
     periodSum[cnpj]=s; nomeByCnpj[cnpj]=nome;
+    totalGmvPeriodo+=s;
     if((arr[iEnd]||0)>0) activeCnpjs[cnpj]=true;
   });
 
@@ -460,10 +463,17 @@ function computeGruposTop10(iStart,iEnd){
   }).concat(standalone);
   rows.sort(function(a,b){return b.gmv-a.gmv;});
 
-  var totalBase=rows.reduce(function(s,r){return s+r.gmv;},0);
+  // totalAtivos = soma do GMV apenas dos clientes ativos (usado no rodape "Empresas
+  // no Grupo"/contagem); totalGmvPeriodo = GMV de TODA a base no periodo, o mesmo
+  // numero que aparece na aba GMV — e o usado como "Total geral" para nao dar a
+  // falsa impressao de divergencia entre as duas abas (corrigido em 09/Set/2026:
+  // antes o "Total geral da base" somava so os ativos e ficava R$1,4mi abaixo do
+  // GMV VT oficial do mesmo periodo, gerando confusao).
+  var totalAtivos=rows.reduce(function(s,r){return s+r.gmv;},0);
   return {
-    rows:rows, top10:rows.slice(0,10), totalBase:totalBase, qtdGrupos:rows.length,
-    totalClientesBase:_GMVSEG.length, qtdAtivos:Object.keys(activeCnpjs).length,
+    rows:rows, top10:rows.slice(0,10), totalBase:totalGmvPeriodo, totalAtivos:totalAtivos,
+    qtdGrupos:rows.length, totalClientesBase:_GMVSEG.length,
+    qtdAtivos:Object.keys(activeCnpjs).length,
     iStart:iStart, iEnd:iEnd, nMeses:nMeses
   };
 }
@@ -554,10 +564,12 @@ window.renderGruposTab=function(){
     '</tr>';
 
   var pctTopBase=d.totalBase?(top10sum/d.totalBase*100):0;
+  var pctAtivos=d.totalAtivos?(top10sum/d.totalAtivos*100):0;
   document.getElementById('grupos-summary').innerHTML=
-    '<div>Total geral da base (grupos/empresas ativas em '+mEnd+' com GMV no período): <b style="color:var(--text);">'+fmt(d.totalBase)+'</b></div>'+
+    '<div>GMV total do período (todos os clientes — mesma base da aba GMV): <b style="color:var(--text);">'+fmt(d.totalBase)+'</b></div>'+
+    '<div>GMV do período apenas de clientes ativos em '+mEnd+' ('+d.qtdAtivos+' de '+d.totalClientesBase+' na base): <b style="color:var(--text);">'+fmt(d.totalAtivos)+'</b></div>'+
     '<div>Qtd. total de grupos/empresas ativos distintos no período: '+d.qtdGrupos+'</div>'+
-    '<div>% do Top 10 sobre o total geral da base (ativos): <b style="color:var(--text);">'+pctTopBase.toFixed(1)+'%</b></div>';
+    '<div>% do Top 10 sobre o GMV total do período: <b style="color:var(--text);">'+pctTopBase.toFixed(1)+'%</b> · sobre o GMV de clientes ativos: <b style="color:var(--text);">'+pctAtivos.toFixed(1)+'%</b></div>';
 
   window._gruposData=d;
 };
@@ -587,11 +599,15 @@ window.exportarExcelGrupos=function(){
     aoa.push(['','Total Top 10', totalN, Math.round(top10sum*100)/100,
       Math.round(gmTotal*100)/100, 1]);
     aoa.push([]);
-    aoa.push(['','Total geral da base (grupos/empresas ativas em '+mEnd+' com GMV no período)','','',
+    aoa.push(['','GMV total do período (todos os clientes — mesma base da aba GMV)','','',
       Math.round(d.totalBase*100)/100]);
+    aoa.push(['','GMV do período apenas de clientes ativos em '+mEnd+' ('+d.qtdAtivos+' de '+d.totalClientesBase+' na base)','','',
+      Math.round(d.totalAtivos*100)/100]);
     aoa.push(['','Qtd. total de grupos/empresas ativos distintos no período: '+d.qtdGrupos]);
-    aoa.push(['','% do Top 10 sobre o total geral da base (ativos)','','','',
+    aoa.push(['','% do Top 10 sobre o GMV total do período','','','',
       d.totalBase?Math.round(top10sum/d.totalBase*1000)/1000:0]);
+    aoa.push(['','% do Top 10 sobre o GMV de clientes ativos','','','',
+      d.totalAtivos?Math.round(top10sum/d.totalAtivos*1000)/1000:0]);
 
     var wb=XLSX.utils.book_new();
     var ws=XLSX.utils.aoa_to_sheet(aoa);
