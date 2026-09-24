@@ -146,6 +146,10 @@ function togglePwd(){
   </div>
   <div class="kpi-grid" id="gmv-kpis"></div>
   <div class="chart-grid full"><div class="chart-card"><h3>GMV Mensal</h3><p class="chart-sub">Evolução no período selecionado, em R$</p><div class="chart-wrap"><canvas id="gmvLineChart"></canvas></div></div></div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>🏆 Top 10 Clientes por GMV</h3><p class="chart-sub" id="top10Sub">Período selecionado</p><div class="chart-wrap" style="height:340px;"><canvas id="top10Chart"></canvas></div></div>
+    <div class="table-card" style="margin-bottom:0;"><h3>📋 Top 10 Clientes — GMV no Período</h3><div class="table-scroll"><table><thead><tr><th>#</th><th>Código</th><th>Nome</th><th>GMV</th><th>% do GMV</th></tr></thead><tbody id="top10Tbody"></tbody></table></div></div>
+  </div>
   <div class="table-card"><h3>📋 Detalhe Mensal — GMV / Casco / Taxa</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th>GMV</th><th>Casco</th><th>Taxa</th><th>Total</th></tr></thead><tbody id="gmvTbody"></tbody></table></div></div>
 </div>
 
@@ -230,7 +234,32 @@ function deltaMoM(cur, prev){
 }
 
 // ===== GMV TAB =====
-let cGmvLine;
+let cGmvLine, cTop10;
+function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function truncLabel(s, n){ s = String(s||''); return s.length > n ? s.slice(0, n-1) + '…' : s; }
+function renderTop10(gFrom, gTo){
+  const totalPeriodo = sum(VT_GMV.slice(gFrom, gTo+1));
+  const rows = VT_CLIENTES
+    .map(c=>({cod:c.cod, nome:c.nome||'', gmv:sum(c.gmvArr.slice(gFrom, gTo+1))}))
+    .filter(c=>c.gmv > 0)
+    .sort((a,b)=>b.gmv - a.gmv)
+    .slice(0, 10);
+  const top10Total = sum(rows.map(r=>r.gmv));
+  const pct = v => totalPeriodo ? v / totalPeriodo * 100 : 0;
+  const periodo = gFrom===gTo ? VT_MONTHS[gFrom] : `${VT_MONTHS[gFrom]} – ${VT_MONTHS[gTo]}`;
+  document.getElementById('top10Sub').textContent =
+    `${periodo} · Top 10 = ${fmtR(top10Total)} (${fmtPct(pct(top10Total))} do GMV do período)`;
+
+  cTop10._rows = rows;
+  cTop10.data.labels = rows.map(r=>truncLabel(r.cod+' '+r.nome, 28));
+  cTop10.data.datasets[0].data = rows.map(r=>r.gmv);
+  cTop10.update();
+
+  const tb = document.getElementById('top10Tbody');
+  tb.innerHTML = rows.length
+    ? rows.map((r,i)=>`<tr><td>${i+1}</td><td>${escHtml(r.cod)}</td><td>${escHtml(r.nome)}</td><td>${fmtR(r.gmv)}</td><td>${fmtPct(pct(r.gmv))}</td></tr>`).join('')
+    : '<tr><td colspan="5" style="color:var(--muted);text-align:center;">Sem GMV no período selecionado</td></tr>';
+}
 (function(){
   fillMonthSelect(document.getElementById('gFrom'), 0);
   fillMonthSelect(document.getElementById('gTo'), VT_LAST_IDX);
@@ -243,6 +272,15 @@ let cGmvLine;
     ]},
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#e2e8f0'}}},
       scales:{ x:{ticks:{color:'#94a3b8'}, grid:{color:'#2a2f45'}}, y:{ticks:{color:'#94a3b8'}, grid:{color:'#2a2f45'}} } }
+  });
+  cTop10 = new Chart(document.getElementById('top10Chart'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{label:'GMV', data:[], backgroundColor:'rgba(34,211,238,.55)', borderColor:'#22d3ee', borderWidth:1, borderRadius:4}] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{
+        title:items=>{ const c=cTop10._rows[items[0].dataIndex]; return c ? c.cod+' — '+c.nome : ''; },
+        label:item=>fmtR(item.raw) }} },
+      scales:{ x:{ticks:{color:'#94a3b8'}, grid:{color:'#2a2f45'}}, y:{ticks:{color:'#94a3b8', font:{size:11}}, grid:{display:false}} } }
   });
   applyGmv();
 })();
@@ -273,6 +311,8 @@ function applyGmv(){
   cGmvLine.data.datasets[1].data = fcasco;
   cGmvLine.data.datasets[2].data = ftaxa;
   cGmvLine.update();
+
+  renderTop10(gFrom, gTo);
 
   const tb = document.getElementById('gmvTbody');
   tb.innerHTML = fm.map((m,idx)=>{ const i=gFrom+idx; return `<tr><td>${m}</td><td>${fmtR(VT_GMV[i])}</td><td>${fmtR(VT_CASCO[i])}</td><td>${fmtR(VT_TAXA[i])}</td><td>${fmtR(VT_TOTAL[i])}</td></tr>`; }).join('');
