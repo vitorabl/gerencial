@@ -966,12 +966,12 @@ function resumoInit(p){
     scales:{ x:{ticks:{color:'#64748B'}, grid:{color:'#EEF2F7'}}, y:{ticks:{color:'#64748B'}, grid:{color:'#EEF2F7'}} } }, extra||{});
   st.charts.vendas = new Chart(document.getElementById(p+'rsVendasChart'), {
     data:{ labels:[], datasets:[
-      {type:'bar', label:'Vendas (GMV)', data:[], backgroundColor:'rgba(253,100,0,.85)', borderRadius:4, yAxisID:'y'},
-      {type:'line', label:'Clientes que compraram no mês', data:[], borderColor:'#022C68', backgroundColor:'#022C68', tension:.3, yAxisID:'y1'},
+      {type:'bar', label:'Vendas (GMV)', data:[], backgroundColor:'rgba(253,100,0,.85)', borderRadius:4, yAxisID:'y', order:1},
+      {type:'line', label:'Clientes que compraram no mês', data:[], borderColor:'#022C68', backgroundColor:'#022C68', tension:.3, yAxisID:'y1', order:0},
     ]},
     options: opts({ scales:{ x:{ticks:{color:'#64748B'}, grid:{display:false}},
       y:{position:'left', ticks:{color:'#64748B', callback:v=>'R$ '+(v/1000).toLocaleString('pt-BR')+'k'}, grid:{color:'#EEF2F7'}},
-      y1:{position:'right', ticks:{color:'#022C68'}, grid:{display:false}} } })
+      y1:{position:'right', beginAtZero:true, ticks:{color:'#022C68'}, grid:{display:false}} } })
   });
   st.charts.base = new Chart(document.getElementById(p+'rsBaseChart'), {
     data:{ labels:[], datasets:[
@@ -985,7 +985,7 @@ function resumoInit(p){
   st.charts.ativa = new Chart(document.getElementById(p+'rsAtivaChart'), {
     type:'line',
     data:{ labels:[], datasets:[{label:'Base ativa (compraram nos últimos 3 meses)', data:[], borderColor:'#022C68', backgroundColor:'rgba(2,44,104,.10)', fill:true, tension:.3}] },
-    options: opts()
+    options: opts({ scales:{ x:{ticks:{color:'#64748B'}, grid:{color:'#EEF2F7'}}, y:{beginAtZero:true, ticks:{color:'#64748B'}, grid:{color:'#EEF2F7'}} } })
   });
   resumoApply(p);
 }
