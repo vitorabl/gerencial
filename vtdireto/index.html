@@ -96,8 +96,14 @@
   @media print {
     .header, .proj-bar, .tabs, .filter-bar, .footer-note, .no-print, #auth-overlay { display:none !important; }
     body { background:#fff; } .content { padding:0; }
-    .chart-card, .table-card, .kpi, .rs-best, .rs-insights { break-inside:avoid; box-shadow:none; }
-    .table-scroll { max-height:none; overflow:visible; }
+    .chart-card, .kpi, .rs-best, .rs-insights { break-inside:avoid; box-shadow:none; }
+    .table-card { overflow:visible !important; box-shadow:none; break-inside:auto; }
+    .table-scroll { max-height:none !important; overflow:visible !important; }
+    .rs-tables { grid-template-columns:1fr !important; }
+    .rs-tables .table-card { margin-bottom:16px !important; }
+    thead { display:table-header-group; }
+    tr { break-inside:avoid; }
+    .rs-section { break-after:avoid; }
     * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   }
   @media(max-width:1000px){ .rs-hero{grid-template-columns:1fr;} .rs-flow{grid-template-columns:1fr 1fr;} }
@@ -269,7 +275,7 @@ function togglePwd(){
   </div>
   <div class="rs-insights" id="rsInsights"></div>
   <div class="rs-section">Relatório do mês de referência</div>
-  <div class="chart-grid">
+  <div class="chart-grid rs-tables">
     <div class="table-card" style="margin-bottom:0;"><h3>🟦 Clientes que começaram a comprar — <span id="rsMesRef1"></span></h3><div class="table-scroll" style="max-height:420px;"><table><thead id="rsNovosHead"></thead><tbody id="rsNovosBody"></tbody></table></div></div>
     <div class="table-card" style="margin-bottom:0;"><h3>🟧 Clientes que pararam de comprar — <span id="rsMesRef2"></span></h3><div class="table-scroll" style="max-height:420px;"><table><thead id="rsSaidasHead"></thead><tbody id="rsSaidasBody"></tbody></table></div></div>
   </div>
@@ -384,7 +390,7 @@ function togglePwd(){
   </div>
   <div class="rs-insights" id="arsInsights"></div>
   <div class="rs-section">Relatório do mês de referência</div>
-  <div class="chart-grid">
+  <div class="chart-grid rs-tables">
     <div class="table-card" style="margin-bottom:0;"><h3>🟦 Clientes que começaram a comprar — <span id="arsMesRef1"></span></h3><div class="table-scroll" style="max-height:420px;"><table><thead id="arsNovosHead"></thead><tbody id="arsNovosBody"></tbody></table></div></div>
     <div class="table-card" style="margin-bottom:0;"><h3>🟧 Clientes que pararam de comprar — <span id="arsMesRef2"></span></h3><div class="table-scroll" style="max-height:420px;"><table><thead id="arsSaidasHead"></thead><tbody id="arsSaidasBody"></tbody></table></div></div>
   </div>
