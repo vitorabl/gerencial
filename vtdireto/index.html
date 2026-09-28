@@ -78,6 +78,29 @@
   .proj.active { display:block; }
   .pill.completo { background:#E8EDF5;color:var(--navy); }
   .pill.basico { background:var(--card2);color:var(--muted); }
+  .rs-hero { display:grid;grid-template-columns:1.2fr 1fr;gap:16px;margin-bottom:24px; }
+  .rs-best { background:var(--navy);color:#fff;border-radius:10px;padding:20px 24px;border-left:6px solid var(--orange);display:flex;flex-direction:column;justify-content:center; }
+  .rs-best .lbl { font-size:10px;letter-spacing:.18em;color:var(--orange);font-weight:700;text-transform:uppercase; }
+  .rs-best .val { font-size:26px;font-weight:700;margin:6px 0 4px; }
+  .rs-best .sub { font-size:12px;color:#AABCD8; }
+  .rs-flow { display:grid;grid-template-columns:repeat(4,1fr);gap:12px; }
+  .rs-flow .kpi { padding:14px 14px 14px 20px; }
+  .rs-section { font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--navy);display:inline-block;padding:4px 10px;border-radius:4px;font-weight:700;margin:6px 0 12px; }
+  .rs-insights { background:var(--card);border:1px solid var(--border);border-left:5px solid var(--orange);border-radius:10px;padding:16px 20px;margin-bottom:24px; }
+  .rs-insights h3 { font-size:14px;color:var(--navy);margin-bottom:8px; }
+  .rs-insights li { font-size:13px;margin:6px 0 6px 18px;line-height:1.45; }
+  .rs-insights b { color:var(--navy); }
+  .rs-def { font-size:11px;color:var(--muted);line-height:1.6; }
+  .rs-def b { color:var(--text); }
+  .pos { color:#15803D;font-weight:700; } .neg { color:#DC2626;font-weight:700; }
+  @media print {
+    .header, .proj-bar, .tabs, .filter-bar, .footer-note, .no-print, #auth-overlay { display:none !important; }
+    body { background:#fff; } .content { padding:0; }
+    .chart-card, .table-card, .kpi, .rs-best, .rs-insights { break-inside:avoid; box-shadow:none; }
+    .table-scroll { max-height:none; overflow:visible; }
+    * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+  @media(max-width:1000px){ .rs-hero{grid-template-columns:1fr;} .rs-flow{grid-template-columns:1fr 1fr;} }
   @media(max-width:768px){ .chart-grid{grid-template-columns:1fr;} .header,.content{padding:16px;} .tabs{padding:12px 16px 0;} .kpi-grid{grid-template-columns:1fr 1fr;} }
 </style>
 </head>
@@ -153,6 +176,7 @@ function togglePwd(){
   <div class="tab active" onclick="showTab('gmv',event)">📊 GMV</div>
   <div class="tab" onclick="showTab('receita',event)">💰 Receita</div>
   <div class="tab" onclick="showTab('clientes',event)">👥 Clientes</div>
+  <div class="tab" onclick="showTab('resumo',event)">🎯 Resumo Executivo</div>
 </div>
 
 <!-- ===== GMV ===== -->
@@ -218,6 +242,46 @@ function togglePwd(){
     </table></div>
   </div>
 </div>
+
+<div class="content" id="tab-resumo">
+  <div class="filter-bar">
+    <label>📅 Período:</label>
+    <select id="rsFrom" onchange="resumoApply('')"></select>
+    <span style="color:var(--muted);font-size:12px;">até</span>
+    <select id="rsTo" onchange="resumoApply('')"></select>
+    <button class="filter-btn" onclick="resumoReset('')">Últimos 13 meses</button>
+    <button class="filter-btn" onclick="resumoExport('')" style="margin-left:auto;">⬇ Exportar movimento (CSV)</button>
+    <button class="filter-btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+  </div>
+  <div id="rsWarn"></div>
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+    <h2 style="color:var(--navy);font-size:22px;">Resumo Executivo — Projeto NLA</h2>
+    <span style="color:var(--muted);font-size:12px;font-style:italic;" id="rsPeriodo"></span>
+  </div>
+  <div class="rs-section">Vendas</div>
+  <div class="rs-hero" id="rsHero"></div>
+  <div class="chart-grid full"><div class="chart-card"><h3>Faturamento mensal e clientes que compraram</h3><p class="chart-sub">Barras: vendas (GMV) · Linha: clientes com compra no mês</p><div class="chart-wrap" style="height:300px;"><canvas id="rsVendasChart"></canvas></div></div></div>
+  <div class="rs-section">Crescimento da base</div>
+  <div class="rs-flow" id="rsFlow" style="margin-bottom:20px;"></div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>Movimento da base por mês</h3><p class="chart-sub">Entradas (novos + recuperados) acima de zero · saídas abaixo</p><div class="chart-wrap" style="height:300px;"><canvas id="rsBaseChart"></canvas></div></div>
+    <div class="chart-card"><h3>Base ativa</h3><p class="chart-sub">Clientes que compraram nos últimos 3 meses</p><div class="chart-wrap" style="height:300px;"><canvas id="rsAtivaChart"></canvas></div></div>
+  </div>
+  <div class="rs-insights" id="rsInsights"></div>
+  <div class="rs-section">Relatório do mês de referência</div>
+  <div class="chart-grid">
+    <div class="table-card" style="margin-bottom:0;"><h3>🟦 Clientes que começaram a comprar — <span id="rsMesRef1"></span></h3><div class="table-scroll" style="max-height:420px;"><table><thead id="rsNovosHead"></thead><tbody id="rsNovosBody"></tbody></table></div></div>
+    <div class="table-card" style="margin-bottom:0;"><h3>🟧 Clientes que pararam de comprar — <span id="rsMesRef2"></span></h3><div class="table-scroll" style="max-height:420px;"><table><thead id="rsSaidasHead"></thead><tbody id="rsSaidasBody"></tbody></table></div></div>
+  </div>
+  <div class="table-card" style="margin-top:20px;margin-bottom:0;"><h3>🟩 Clientes recuperados — <span id="rsMesRef3"></span></h3><p class="chart-sub" style="padding:8px 18px 0;margin:0;">Voltaram a comprar no mês depois de 3 meses ou mais sem pedidos</p><div class="table-scroll" style="max-height:420px;"><table><thead id="rsRecupHead"></thead><tbody id="rsRecupBody"></tbody></table></div></div>
+  <div class="chart-card rs-def" style="margin-top:20px;">
+    <b>Como ler:</b> <b>Base ativa</b> = clientes que compraram em algum dos últimos 3 meses ·
+    <b>Novo cliente</b> = primeira compra no histórico disponível ·
+    <b>Saiu da base</b> = completou 3 meses sem comprar (contado no mês em que isso acontece; valor = compra do último mês ativo) ·
+    <b>Recuperado</b> = voltou a comprar depois de 3+ meses parado ·
+    <b>Saldo</b> = novos + recuperados − saídas = variação da base ativa no mês.
+  </div>
+</div>
 </div>
 
 <div class="proj" id="proj-ali">
@@ -225,6 +289,7 @@ function togglePwd(){
   <div class="tab active" onclick="showTab('agmv',event)">📊 GMV</div>
   <div class="tab" onclick="showTab('areceita',event)">💰 Receita</div>
   <div class="tab" onclick="showTab('aclientes',event)">👥 Clientes</div>
+  <div class="tab" onclick="showTab('aresumo',event)">🎯 Resumo Executivo</div>
 </div>
 
 <div class="content active" id="tab-agmv">
@@ -292,6 +357,46 @@ function togglePwd(){
     </table></div>
   </div>
 </div>
+
+<div class="content" id="tab-aresumo">
+  <div class="filter-bar">
+    <label>📅 Período:</label>
+    <select id="arsFrom" onchange="resumoApply('a')"></select>
+    <span style="color:var(--muted);font-size:12px;">até</span>
+    <select id="arsTo" onchange="resumoApply('a')"></select>
+    <button class="filter-btn" onclick="resumoReset('a')">Últimos 13 meses</button>
+    <button class="filter-btn" onclick="resumoExport('a')" style="margin-left:auto;">⬇ Exportar movimento (CSV)</button>
+    <button class="filter-btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+  </div>
+  <div id="arsWarn"></div>
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+    <h2 style="color:var(--navy);font-size:22px;">Resumo Executivo — Projeto ALI</h2>
+    <span style="color:var(--muted);font-size:12px;font-style:italic;" id="arsPeriodo"></span>
+  </div>
+  <div class="rs-section">Vendas</div>
+  <div class="rs-hero" id="arsHero"></div>
+  <div class="chart-grid full"><div class="chart-card"><h3>Faturamento mensal e clientes que compraram</h3><p class="chart-sub">Barras: vendas (GMV) · Linha: clientes com compra no mês</p><div class="chart-wrap" style="height:300px;"><canvas id="arsVendasChart"></canvas></div></div></div>
+  <div class="rs-section">Crescimento da base</div>
+  <div class="rs-flow" id="arsFlow" style="margin-bottom:20px;"></div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>Movimento da base por mês</h3><p class="chart-sub">Entradas (novos + recuperados) acima de zero · saídas abaixo</p><div class="chart-wrap" style="height:300px;"><canvas id="arsBaseChart"></canvas></div></div>
+    <div class="chart-card"><h3>Base ativa</h3><p class="chart-sub">Clientes que compraram nos últimos 3 meses</p><div class="chart-wrap" style="height:300px;"><canvas id="arsAtivaChart"></canvas></div></div>
+  </div>
+  <div class="rs-insights" id="arsInsights"></div>
+  <div class="rs-section">Relatório do mês de referência</div>
+  <div class="chart-grid">
+    <div class="table-card" style="margin-bottom:0;"><h3>🟦 Clientes que começaram a comprar — <span id="arsMesRef1"></span></h3><div class="table-scroll" style="max-height:420px;"><table><thead id="arsNovosHead"></thead><tbody id="arsNovosBody"></tbody></table></div></div>
+    <div class="table-card" style="margin-bottom:0;"><h3>🟧 Clientes que pararam de comprar — <span id="arsMesRef2"></span></h3><div class="table-scroll" style="max-height:420px;"><table><thead id="arsSaidasHead"></thead><tbody id="arsSaidasBody"></tbody></table></div></div>
+  </div>
+  <div class="table-card" style="margin-top:20px;margin-bottom:0;"><h3>🟩 Clientes recuperados — <span id="arsMesRef3"></span></h3><p class="chart-sub" style="padding:8px 18px 0;margin:0;">Voltaram a comprar no mês depois de 3 meses ou mais sem pedidos</p><div class="table-scroll" style="max-height:420px;"><table><thead id="arsRecupHead"></thead><tbody id="arsRecupBody"></tbody></table></div></div>
+  <div class="chart-card rs-def" style="margin-top:20px;">
+    <b>Como ler:</b> <b>Base ativa</b> = clientes que compraram em algum dos últimos 3 meses ·
+    <b>Novo cliente</b> = primeira compra no histórico disponível ·
+    <b>Saiu da base</b> = completou 3 meses sem comprar (contado no mês em que isso acontece; valor = compra do último mês ativo) ·
+    <b>Recuperado</b> = voltou a comprar depois de 3+ meses parado ·
+    <b>Saldo</b> = novos + recuperados − saídas = variação da base ativa no mês.
+  </div>
+</div>
 </div>
 
 <div class="footer-note" id="footer-note">VTDireto &middot; dados gerados em 28/09/2026 &middot; fonte: planilhas mensais (NLA)</div>
@@ -315,6 +420,8 @@ function showTab(name,e){
   scope.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   if(e&&e.target)e.target.classList.add('active');
+  if(name==='resumo') resumoInit('');
+  if(name==='aresumo') resumoInit('a');
   resizeVisibleCharts();
 }
 function resizeVisibleCharts(){
@@ -793,6 +900,205 @@ function aliExportCSV(){
   a.href = url; a.download = 'vtdireto_ali_clientes.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// ===================== RESUMO EXECUTIVO (NLA e ALI) =====================
+// Regras (ver REGRAS_VTDIRETO_MOTIVA.md §12):
+//  - Comprou no mês = GMV + Taxa + Casco do cliente no mês > 0 (mês pela data do pedido/estocagem)
+//  - Base ativa (M) = clientes que compraram em M, M-1 ou M-2
+//  - Saída em M = estava na base ativa de M-1 e não está na de M (3 meses sem comprar)
+//    · valor perdido = GMV do último mês em que o cliente comprou
+//  - Novo em M = primeiro mês de compra em todo o histórico disponível
+//  - Recuperado em M = comprou em M, não estava na base ativa de M-1 e não é novo
+//  - Identidade: base(M) = base(M-1) + novos + recuperados − saídas
+const RS = {};
+function rsDataset(p){
+  if(p==='a') return { months:ALI.months, gmv:ALI.gmv, hasDoc:true, file:'vtdireto_ali',
+    clientes:ALI.clientes.map(c=>({cod:c.cod, nome:c.nome, doc:c.doc, gmvArr:c.gmvArr,
+      buy:c.gmvArr.map((g,i)=>g + (c.taxaArr[i]||0) > 0)})) };
+  return { months:VT_MONTHS, gmv:VT_GMV, hasDoc:false, file:'vtdireto_nla',
+    clientes:VT_CLIENTES.map(c=>({cod:c.cod, nome:c.nome, doc:'', gmvArr:c.gmvArr,
+      buy:c.gmvArr.map((g,i)=>g + (c.cascoArr[i]||0) + (c.taxaArr[i]||0) > 0)})) };
+}
+function rsCompute(ds){
+  const n = ds.months.length;
+  const ativos = Array(n).fill(0), base = Array(n).fill(0), novos = Array(n).fill(0), saidas = Array(n).fill(0),
+        recup = Array(n).fill(0), gmvNovos = Array(n).fill(0), perdas = Array(n).fill(0);
+  const listas = Array.from({length:n}, ()=>({novos:[], saidas:[], recup:[]}));
+  ds.clientes.forEach(c=>{
+    const first = c.buy.indexOf(true);
+    if(first < 0) return;
+    const inBase = i => i >= 0 && (c.buy[i] || (i>0 && c.buy[i-1]) || (i>1 && c.buy[i-2]));
+    let lastBuy = -1;
+    for(let i=0;i<n;i++){
+      if(c.buy[i]) ativos[i]++;
+      const b = inBase(i), bPrev = inBase(i-1);
+      if(b) base[i]++;
+      if(i===first){ novos[i]++; gmvNovos[i]+=c.gmvArr[i]; listas[i].novos.push({c, valor:c.gmvArr[i]}); }
+      else if(c.buy[i] && !bPrev){ recup[i]++; listas[i].recup.push({c, valor:c.gmvArr[i], semComprar:i-lastBuy-1}); }
+      if(bPrev && !b){ saidas[i]++; perdas[i]+=c.gmvArr[lastBuy]; listas[i].saidas.push({c, valor:c.gmvArr[lastBuy], ultimo:lastBuy}); }
+      if(c.buy[i]) lastBuy = i;
+    }
+  });
+  return {ativos, base, novos, saidas, recup, gmvNovos, perdas, listas};
+}
+function rsDefaultRange(ds){
+  const n = ds.months.length;
+  const hoje = new Date(VT_HOJE+'T00:00:00');
+  const curLbl = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][hoje.getMonth()] + '/' + String(hoje.getFullYear()).slice(2);
+  let to = n - 1;
+  if(ds.months[to] === curLbl && to > 0) to--;
+  return [Math.max(3, to - 12), to];
+}
+function resumoInit(p){
+  if(RS[p]) return;
+  const ds = rsDataset(p);
+  const m = rsCompute(ds);
+  const st = RS[p] = {ds, m, charts:{}};
+  const [f, t] = rsDefaultRange(ds);
+  ['From','To'].forEach((k,j)=>{
+    const sel = document.getElementById(p+'rs'+k);
+    sel.innerHTML = ds.months.map((mm,i)=>`<option value="${i}">${mm}</option>`).join('');
+    sel.value = j===0 ? f : t;
+  });
+  const opts = extra => Object.assign({ responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#0F1C3F'}}},
+    scales:{ x:{ticks:{color:'#64748B'}, grid:{color:'#EEF2F7'}}, y:{ticks:{color:'#64748B'}, grid:{color:'#EEF2F7'}} } }, extra||{});
+  st.charts.vendas = new Chart(document.getElementById(p+'rsVendasChart'), {
+    data:{ labels:[], datasets:[
+      {type:'bar', label:'Vendas (GMV)', data:[], backgroundColor:'rgba(253,100,0,.85)', borderRadius:4, yAxisID:'y'},
+      {type:'line', label:'Clientes que compraram no mês', data:[], borderColor:'#022C68', backgroundColor:'#022C68', tension:.3, yAxisID:'y1'},
+    ]},
+    options: opts({ scales:{ x:{ticks:{color:'#64748B'}, grid:{display:false}},
+      y:{position:'left', ticks:{color:'#64748B', callback:v=>'R$ '+(v/1000).toLocaleString('pt-BR')+'k'}, grid:{color:'#EEF2F7'}},
+      y1:{position:'right', ticks:{color:'#022C68'}, grid:{display:false}} } })
+  });
+  st.charts.base = new Chart(document.getElementById(p+'rsBaseChart'), {
+    data:{ labels:[], datasets:[
+      {type:'bar', label:'Novos clientes', data:[], backgroundColor:'#022C68', borderRadius:4, stack:'mov'},
+      {type:'bar', label:'Recuperados', data:[], backgroundColor:'#8BAFD4', borderRadius:4, stack:'mov'},
+      {type:'bar', label:'Saíram da base', data:[], backgroundColor:'#FD6400', borderRadius:4, stack:'mov'},
+      {type:'line', label:'Saldo do mês', data:[], borderColor:'#0F1C3F', backgroundColor:'#0F1C3F', borderDash:[4,4], tension:.2},
+    ]},
+    options: opts({ scales:{ x:{stacked:true, ticks:{color:'#64748B'}, grid:{display:false}}, y:{stacked:true, ticks:{color:'#64748B'}, grid:{color:'#EEF2F7'}} } })
+  });
+  st.charts.ativa = new Chart(document.getElementById(p+'rsAtivaChart'), {
+    type:'line',
+    data:{ labels:[], datasets:[{label:'Base ativa (compraram nos últimos 3 meses)', data:[], borderColor:'#022C68', backgroundColor:'rgba(2,44,104,.10)', fill:true, tension:.3}] },
+    options: opts()
+  });
+  resumoApply(p);
+}
+function rsNome(c){ return /^[\d.\/-]+$/.test(String(c.nome||'').trim()) ? '<i style="color:var(--muted)">nome não informado no cadastro</i>' : escHtml(c.nome); }
+function rsPct(cur, prev){
+  if(!prev) return '';
+  const v = (cur - prev) / prev * 100;
+  return `<span class="${v>=0?'pos':'neg'}">${v>=0?'+':''}${v.toFixed(1).replace('.',',')}%</span>`;
+}
+function rsSigned(v){ return `<span class="${v>=0?'pos':'neg'}">${v>=0?'+':''}${fmtN(v)}</span>`; }
+function resumoApply(p){
+  const st = RS[p]; if(!st) return;
+  const {ds, m} = st;
+  let f = parseInt(document.getElementById(p+'rsFrom').value), t = parseInt(document.getElementById(p+'rsTo').value);
+  if(f > t){ t = f; document.getElementById(p+'rsTo').value = t; }
+  const L = t - f + 1, sl = a => a.slice(f, t+1), M = ds.months;
+  const per = f===t ? M[f] : `${M[f]} a ${M[t]}`;
+  const gmvP = sum(sl(ds.gmv));
+  const pf = f - L, gmvPrev = pf >= 0 ? sum(ds.gmv.slice(pf, f)) : null;
+  const yoy = t - 12 >= 0 ? ds.gmv[t-12] : null;
+  const novosP = sum(sl(m.novos)), saidasP = sum(sl(m.saidas)), recupP = sum(sl(m.recup));
+  const gmvNovosP = sum(sl(m.gmvNovos)), perdasP = sum(sl(m.perdas));
+  const baseIni = f > 0 ? m.base[f-1] : m.base[f], baseFim = m.base[t];
+  const saldo = novosP + recupP - saidasP;
+  const mediaBase = sum(sl(m.base)) / L;
+  let best = f; for(let i=f;i<=t;i++) if(ds.gmv[i] > ds.gmv[best]) best = i;
+  const warmup = f < 12 ? `<div class="info-note no-print">⚠️ O histórico começa em <strong>${M[0]}</strong>: nos primeiros meses todo cliente aparece como "novo". Para contagem confiável de novos clientes, use períodos a partir de <strong>${M[Math.min(12, M.length-1)]}</strong>.</div>` : '';
+  document.getElementById(p+'rsWarn').innerHTML = warmup;
+  document.getElementById(p+'rsPeriodo').textContent = `Período ${per} · referência ${M[t]}`;
+
+  document.getElementById(p+'rsHero').innerHTML = `
+    <div class="kpi-grid" style="margin-bottom:0;grid-template-columns:1fr 1fr;">
+      <div class="kpi amber"><div class="kpi-label">Vendas no período</div><div class="kpi-value">${fmtR(gmvP)}</div>
+        <div class="kpi-sub">${gmvPrev ? rsPct(gmvP, gmvPrev)+' vs '+L+' meses anteriores' : per}</div></div>
+      <div class="kpi"><div class="kpi-label">Média mensal de vendas</div><div class="kpi-value">${fmtR(gmvP / L)}</div>
+        <div class="kpi-sub">${M[t]}: ${fmtR(ds.gmv[t])} ${yoy ? '· '+rsPct(ds.gmv[t], yoy)+' vs '+M[t-12] : ''}</div></div>
+      <div class="kpi"><div class="kpi-label">Base ativa em ${M[t]}</div><div class="kpi-value">${fmtN(baseFim)}</div>
+        <div class="kpi-sub">compraram nos últimos 3 meses · ${rsSigned(baseFim - baseIni)} no período</div></div>
+      <div class="kpi green"><div class="kpi-label">Média mensal da base ativa</div><div class="kpi-value">${fmtN(Math.round(mediaBase))}</div>
+        <div class="kpi-sub">${fmtN(m.ativos[t])} clientes compraram em ${M[t]}</div></div>
+    </div>
+    <div class="rs-best"><div class="lbl">Melhor mês do período</div><div class="val">${M[best]}</div>
+      <div class="sub">${fmtR(ds.gmv[best])} em vendas · ${fmtN(m.ativos[best])} clientes compraram · base ativa de ${fmtN(m.base[best])}</div></div>`;
+
+  document.getElementById(p+'rsFlow').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Novos clientes</div><div class="kpi-value">${fmtN(novosP)}</div><div class="kpi-sub">${(novosP/L).toFixed(1).replace('.',',')}/mês · ${fmtR(gmvNovosP)} na 1ª compra</div></div>
+    <div class="kpi purple"><div class="kpi-label">Clientes recuperados</div><div class="kpi-value">${fmtN(recupP)}</div><div class="kpi-sub">voltaram após 3+ meses sem comprar</div></div>
+    <div class="kpi amber"><div class="kpi-label">Saíram da base</div><div class="kpi-value">${fmtN(saidasP)}</div><div class="kpi-sub">${(saidasP/L).toFixed(1).replace('.',',')}/mês · ${fmtR(perdasP)} em vendas mensais perdidas</div></div>
+    <div class="kpi ${saldo>=0?'green':'red'}"><div class="kpi-label">Saldo da base</div><div class="kpi-value">${saldo>=0?'+':''}${fmtN(saldo)}</div><div class="kpi-sub">novos + recuperados − saídas</div></div>`;
+
+  // insights
+  const retNovos = (()=>{ // novos do período que ainda estão na base em t
+    let tot=0, fica=0;
+    for(let i=f;i<=t;i++) m.listas[i].novos.forEach(x=>{ tot++; const c=x.c; if(c.buy[t]||(t>0&&c.buy[t-1])||(t>1&&c.buy[t-2])) fica++; });
+    return tot ? fica/tot*100 : null; })();
+  const perdaMedia = saidasP ? perdasP / saidasP : 0;
+  const churnRate = mediaBase ? (saidasP / L) / mediaBase * 100 : 0;
+  const ins = [];
+  ins.push(`Vendas de <b>${fmtR(gmvP)}</b> no período${gmvPrev ? `, ${rsPct(gmvP, gmvPrev)} em relação aos ${L} meses anteriores` : ''}.`);
+  ins.push(`A base ativa ${baseFim>=baseIni?'cresceu':'recuou'} de <b>${fmtN(baseIni)}</b> para <b>${fmtN(baseFim)}</b> clientes (${rsSigned(baseFim-baseIni)}): entraram <b>${fmtN(novosP)}</b> novos e <b>${fmtN(recupP)}</b> recuperados, e saíram <b>${fmtN(saidasP)}</b>.`);
+  if(retNovos!==null) ins.push(`<b>${retNovos.toFixed(0)}%</b> dos novos clientes do período continuam comprando (base ativa em ${M[t]}).`);
+  ins.push(`Em média <b>${(saidasP/L).toFixed(1).replace('.',',')}</b> clientes/mês param de comprar (<b>${churnRate.toFixed(1).replace('.',',')}%</b> da base ativa), com compra mensal média de <b>${fmtR(perdaMedia)}</b>. Recuperar os <b>${fmtN(saidasP)}</b> clientes que saíram representaria <b>${fmtR(perdasP)}</b> por mês em vendas.`);
+  document.getElementById(p+'rsInsights').innerHTML = '<h3>💡 Destaques para a apresentação</h3><ul>' + ins.map(x=>'<li>'+x+'</li>').join('') + '</ul>';
+
+  const labels = sl(M);
+  const c = st.charts;
+  c.vendas.data.labels = labels; c.vendas.data.datasets[0].data = sl(ds.gmv); c.vendas.data.datasets[1].data = sl(m.ativos); c.vendas.update();
+  c.base.data.labels = labels; c.base.data.datasets[0].data = sl(m.novos); c.base.data.datasets[1].data = sl(m.recup);
+  c.base.data.datasets[2].data = sl(m.saidas).map(v=>-v);
+  c.base.data.datasets[3].data = labels.map((_,k)=>m.novos[f+k]+m.recup[f+k]-m.saidas[f+k]); c.base.update();
+  c.ativa.data.labels = labels; c.ativa.data.datasets[0].data = sl(m.base); c.ativa.update();
+
+  document.getElementById(p+'rsMesRef1').textContent = M[t];
+  document.getElementById(p+'rsMesRef2').textContent = M[t];
+  document.getElementById(p+'rsMesRef3').textContent = M[t];
+  const docCol = ds.hasDoc;
+  const head = cols => '<tr>' + cols.map(x=>`<th>${x}</th>`).join('') + '</tr>';
+  const lnov = m.listas[t].novos.slice().sort((a,b)=>b.valor-a.valor);
+  const lsai = m.listas[t].saidas.slice().sort((a,b)=>b.valor-a.valor);
+  document.getElementById(p+'rsNovosHead').innerHTML = head([docCol?'CNPJ':'Código','Razão Social','Valor da 1ª compra']);
+  document.getElementById(p+'rsNovosBody').innerHTML = lnov.length ? lnov.map(x=>`<tr><td>${escHtml(docCol?x.c.doc:x.c.cod)}</td><td>${rsNome(x.c)}</td><td>${fmtR(x.valor)}</td></tr>`).join('')
+    + `<tr><td colspan="2"><b>Total (${lnov.length})</b></td><td><b>${fmtR(sum(lnov.map(x=>x.valor)))}</b></td></tr>`
+    : '<tr><td colspan="3" style="color:var(--muted);text-align:center;">Nenhum novo cliente no mês</td></tr>';
+  document.getElementById(p+'rsSaidasHead').innerHTML = head([docCol?'CNPJ':'Código','Razão Social','Última compra','Valor mensal']);
+  document.getElementById(p+'rsSaidasBody').innerHTML = lsai.length ? lsai.map(x=>`<tr><td>${escHtml(docCol?x.c.doc:x.c.cod)}</td><td>${rsNome(x.c)}</td><td>${M[x.ultimo]}</td><td>${fmtR(x.valor)}</td></tr>`).join('')
+    + `<tr><td colspan="3"><b>Total (${lsai.length})</b></td><td><b>${fmtR(sum(lsai.map(x=>x.valor)))}</b></td></tr>`
+    : '<tr><td colspan="4" style="color:var(--muted);text-align:center;">Nenhuma saída no mês</td></tr>';
+  const lrec = m.listas[t].recup.slice().sort((a,b)=>b.valor-a.valor);
+  document.getElementById(p+'rsRecupHead').innerHTML = head([docCol?'CNPJ':'Código','Razão Social','Compra anterior','Meses sem comprar','Valor da compra no mês']);
+  document.getElementById(p+'rsRecupBody').innerHTML = lrec.length ? lrec.map(x=>`<tr><td>${escHtml(docCol?x.c.doc:x.c.cod)}</td><td>${rsNome(x.c)}</td><td>${M[t - x.semComprar - 1]}</td><td>${x.semComprar}</td><td>${fmtR(x.valor)}</td></tr>`).join('')
+    + `<tr><td colspan="4"><b>Total (${lrec.length})</b></td><td><b>${fmtR(sum(lrec.map(x=>x.valor)))}</b></td></tr>`
+    : '<tr><td colspan="5" style="color:var(--muted);text-align:center;">Nenhum cliente recuperado no mês</td></tr>';
+}
+function resumoReset(p){
+  const [f, t] = rsDefaultRange(RS[p].ds);
+  document.getElementById(p+'rsFrom').value = f; document.getElementById(p+'rsTo').value = t;
+  resumoApply(p);
+}
+function resumoExport(p){
+  const {ds, m} = RS[p];
+  const f = parseInt(document.getElementById(p+'rsFrom').value), t = parseInt(document.getElementById(p+'rsTo').value);
+  const q = s => '"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const num = v => v.toFixed(2).replace('.',',');
+  const lines = [['Mes','Movimento','Codigo','CNPJ','Razao Social','Valor','Ultima compra'].join(';')];
+  for(let i=f;i<=t;i++){
+    m.listas[i].novos.forEach(x=>lines.push([ds.months[i],'Novo',x.c.cod,q(x.c.doc),q(x.c.nome),num(x.valor),''].join(';')));
+    m.listas[i].recup.forEach(x=>lines.push([ds.months[i],'Recuperado',x.c.cod,q(x.c.doc),q(x.c.nome),num(x.valor),ds.months[i - x.semComprar - 1]].join(';')));
+    m.listas[i].saidas.forEach(x=>lines.push([ds.months[i],'Saiu da base',x.c.cod,q(x.c.doc),q(x.c.nome),num(x.valor),ds.months[x.ultimo]].join(';')));
+  }
+  const blob = new Blob(["﻿"+lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = ds.file+'_movimento_base.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 </script>
 </body>
