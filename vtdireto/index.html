@@ -101,6 +101,9 @@
   .pp-gmv { font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border); }
   .pp-gmv b { color:var(--navy);font-size:15px; }
   .pp-desafios p { font-size:13px;line-height:1.55;margin:8px 0; }
+  .pp-mov-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px; }
+  .pp-tot { font-size:12px;font-weight:700;color:var(--navy);margin:-4px 0 8px; }
+  @media (max-width:1100px) { .pp-mov-grid { grid-template-columns:1fr; } }
   @media (max-width:1100px) { .pp-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   @media (max-width:600px) { .pp-grid { grid-template-columns:1fr; } }
   @media print {
@@ -417,9 +420,9 @@ function togglePwd(){
 
 <div class="content" id="tab-aprospeccao">
   <div class="info-note">ℹ️ <strong>Prospecção ALI</strong> — fonte: planilha <strong>Estudo vendas SAD.xlsx</strong> (atualizada em 30/09/2026).
-    Base = aba "Clientes_Perdidos_2025_2026" · GMV total da base = soma da coluna E (Valor Padrão por Pedido) · GMV médio do recuperado = média da coluna E ·
+    Base = aba "Clientes_Perdidos_2025_2026" · GMV total da base = soma da coluna E (Valor Padrão por Pedido) · GMV total do recuperado = soma da coluna E ·
     Base trabalhada = coluna J preenchida · Contato efetivo = coluna L preenchida ·
-    Recuperado = coluna L "Compra feita pela VT Direto" · Prospecção ativa = aba "Novos Clientes" (GMV médio = Demanda).</div>
+    Recuperado = coluna L "Compra feita pela VT Direto" · Prospecção ativa = aba "Novos Clientes" (GMV total = soma da Demanda).</div>
   <div class="pp-grid">
     <div class="kpi "><div class="kpi-label">Total da base</div><div class="kpi-value">250</div><div class="kpi-sub">clientes perdidos 2025/2026</div><div class="pp-gmv">GMV total da base<br><b>R$ 125.939,84</b></div></div>
     <div class="kpi green"><div class="kpi-label">Base trabalhada</div><div class="kpi-value">250</div><div class="pp-pct">100,0% da base total</div></div>
@@ -427,24 +430,32 @@ function togglePwd(){
       <div class="kpi cyan"><div class="kpi-label">Contato efetivo</div><div class="kpi-value">36</div><div class="pp-pct">14,4% da base trabalhada</div></div>
       <div class="kpi red"><div class="kpi-label">Contato não efetivo</div><div class="kpi-value">214</div><div class="pp-pct">85,6% da base trabalhada</div></div>
     </div>
-    <div class="kpi amber"><div class="kpi-label">Contato recuperado</div><div class="kpi-value">3</div><div class="kpi-sub">compra feita pela VT Direto</div><div class="pp-gmv">GMV médio<br><b>R$ 360,93</b></div></div>
-    <div class="kpi purple"><div class="kpi-label">Prospecção ativa VTDireto</div><div class="kpi-value">5</div><div class="kpi-sub">novos clientes</div><div class="pp-gmv">GMV médio<br><b>R$ 91.600,00</b></div></div>
+    <div class="kpi amber"><div class="kpi-label">Contato recuperado</div><div class="kpi-value">3</div><div class="kpi-sub">compra feita pela VT Direto</div><div class="pp-gmv">GMV total<br><b>R$ 1.082,80</b></div></div>
+    <div class="kpi purple"><div class="kpi-label">Prospecção ativa VTDireto</div><div class="kpi-value">5</div><div class="kpi-sub">novos clientes</div><div class="pp-gmv">GMV total (demanda)<br><b>R$ 458.000,00</b></div></div>
   </div>
+  <div class="table-card" id="ppNovosTabela"><h3>🆕 Novos Clientes — Prospecção ativa VTDireto</h3><div class="table-scroll"><table><thead><tr><th>Novos Clientes</th><th>Funcionários</th><th>Demanda</th></tr></thead><tbody><tr><td>Sinai Comercio de Artigos Esportivos LTDA</td><td>60</td><td>R$ 20.000,00</td></tr><tr><td>Apb- Associação Positiva de Brasilia</td><td>200</td><td>R$ 60.000,00</td></tr><tr><td>Ac Coelho Materiais Para Construcao Ltda</td><td>500</td><td>R$ 135.000,00</td></tr><tr><td>Mundo dos Filtros</td><td>250</td><td>R$ 83.000,00</td></tr><tr><td>Big Box</td><td>5.000</td><td>R$ 160.000,00</td></tr><tr><td><b>Total (5)</b></td><td><b>6.010</b></td><td><b>R$ 458.000,00</b></td></tr></tbody></table></div></div>
   <div class="rs-insights pp-desafios"><h3>🧭 Principais Desafios</h3><p>Hoje o maior desafio que encontramos seria localizar e conseguir contato efetivo, nas ligaçoes conseguimos o nome da pessoa ou endereço de e-mail, mas chegar no decisor e entender a situação do momento é algo que vem sendo desafiador, mas de toda forma não paramos no primeiro contato, seguimos no foco de falar efetivamente com decisor e entender o cenario</p><p>Outro ponto importante e desafiador seria que na maioria das empresas que conseguimos contato, estão realizando o pagameto no cartão flexivel para trazer autonomia na escolha do colaborador em optar pelo VT e comprar direto na Taguatur, ou utilizar o combustivel para utilização propria ou dividir com colegas a ida para o trabalho, exemplo: Diagnostic, cnpj 03500455000164</p></div>
 
   <div class="filter-bar">
-    <label>📅 Comparar:</label>
-    <select id="ppMesA" onchange="ppApply()"></select>
-    <span style="color:var(--muted);font-size:12px;">com</span>
-    <select id="ppMesB" onchange="ppApply()"></select>
-    <button class="filter-btn" onclick="ppReset()">Últimos 2 meses</button>
+    <label>📅 Movimento de clientes — período:</label>
+    <select id="ppFrom" onchange="ppApply()"></select>
+    <span style="color:var(--muted);font-size:12px;">até</span>
+    <select id="ppTo" onchange="ppApply()"></select>
+    <button class="filter-btn" onclick="ppReset()">Último ano</button>
   </div>
-  <div class="chart-card">
-    <h3>Quantidade de clientes por movimento</h3>
-    <p class="chart-sub">Mesma regra do Resumo Executivo: Novos = 1ª compra · Reativação = voltou após 3+ meses sem comprar · Saíram = completou 3 meses sem comprar · passe o mouse nas barras para ver o GMV</p>
-    <div class="chart-wrap" style="height:300px;"><canvas id="ppMovChart"></canvas></div>
-    <p class="chart-sub" id="ppMovNote" style="margin:8px 0 0;"></p>
+  <div class="pp-mov-grid">
+    <div class="chart-card"><h3>🟦 Novos</h3><p class="chart-sub">1ª compra no histórico</p>
+      <p class="pp-tot" id="ppNovosChartTot"></p>
+      <div class="chart-wrap" style="height:260px;"><canvas id="ppNovosChart"></canvas></div></div>
+    <div class="chart-card"><h3>🔄 Reativação</h3><p class="chart-sub">voltou a comprar após 3+ meses parado</p>
+      <p class="pp-tot" id="ppRecupChartTot"></p>
+      <div class="chart-wrap" style="height:260px;"><canvas id="ppRecupChart"></canvas></div></div>
+    <div class="chart-card"><h3>🟧 Saíram</h3><p class="chart-sub">completou 3 meses sem comprar</p>
+      <p class="pp-tot" id="ppSaidasChartTot"></p>
+      <div class="chart-wrap" style="height:260px;"><canvas id="ppSaidasChart"></canvas></div></div>
   </div>
+  <p style="margin:8px 0 0;font-size:11px;color:var(--muted);">Mesma regra do Resumo Executivo · passe o mouse nas barras para ver o GMV · <span id="ppMovNote"></span></p>
+
 </div>
 </div>
 
@@ -1001,62 +1012,70 @@ function rsDefaultRange(ds){
   return [Math.max(3, to - 12), to];
 }
 let PP = null;
-function ppMesLabel(i){
+const PP_SERIES = [
+  {key:'novos', canvas:'ppNovosChart', label:'Novos clientes', color:'#022C68', gmvLbl:'GMV da 1ª compra'},
+  {key:'recup', canvas:'ppRecupChart', label:'Reativação', color:'#8BAFD4', gmvLbl:'GMV no mês da volta'},
+  {key:'saidas', canvas:'ppSaidasChart', label:'Saíram', color:'#FD6400', gmvLbl:'GMV mensal perdido'},
+];
+function ppCurLabel(){
   const hoje = new Date(VT_HOJE+'T00:00:00');
-  const cur = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][hoje.getMonth()] + '/' + String(hoje.getFullYear()).slice(2);
-  return ALI.months[i] === cur ? ALI.months[i] + '* (parcial)' : ALI.months[i];
+  return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][hoje.getMonth()] + '/' + String(hoje.getFullYear()).slice(2);
 }
+function ppMesLabel(i){ return ALI.months[i] === ppCurLabel() ? ALI.months[i] + '*' : ALI.months[i]; }
+function ppDefaultRange(){ const n = ALI.months.length; return [Math.max(0, n-12), n-1]; }
 function ppInit(){
-  if(PP || !ALI || !document.getElementById('ppMovChart')) return;
-  const ds = rsDataset('a');
-  PP = {m: rsCompute(ds)};
-  const n = ALI.months.length;
-  [['ppMesA', Math.max(0, n-2)], ['ppMesB', n-1]].forEach(([id, def])=>{
+  if(PP || !ALI || !document.getElementById('ppNovosChart')) return;
+  const m = rsCompute(rsDataset('a'));
+  PP = {m, gmv:{novos:m.gmvNovos, recup:m.listas.map(l=>sum(l.recup.map(x=>x.valor))), saidas:m.perdas}, charts:{}};
+  const [f, t] = ppDefaultRange();
+  [['ppFrom', f], ['ppTo', t]].forEach(([id, def])=>{
     const sel = document.getElementById(id);
-    sel.innerHTML = ALI.months.map((_,i)=>`<option value="${i}">${ppMesLabel(i)}</option>`).join('');
+    sel.innerHTML = ALI.months.map((mm,i)=>`<option value="${i}">${mm}</option>`).join('');
     sel.value = def;
   });
   const valueLabels = { id:'ppValueLabels', afterDatasetsDraw(chart){
-    const ctx = chart.ctx; ctx.save(); ctx.font = 'bold 12px Arial'; ctx.fillStyle = '#0F1C3F'; ctx.textAlign = 'center';
-    chart.data.datasets.forEach((d,di)=>{ chart.getDatasetMeta(di).data.forEach((bar,k)=>{ ctx.fillText(fmtN(d.data[k]), bar.x, bar.y - 6); }); });
+    const ctx = chart.ctx; ctx.save(); ctx.font = 'bold 11px Arial'; ctx.fillStyle = '#0F1C3F'; ctx.textAlign = 'center';
+    chart.getDatasetMeta(0).data.forEach((bar,k)=>{ ctx.fillText(fmtN(chart.data.datasets[0].data[k]), bar.x, bar.y - 5); });
     ctx.restore(); } };
-  PP.chart = new Chart(document.getElementById('ppMovChart'), {
-    type:'bar',
-    data:{ labels:['Novos','Reativação','Saíram'], datasets:[
-      {label:'', data:[], backgroundColor:'#022C68', borderRadius:4},
-      {label:'', data:[], backgroundColor:'#FD6400', borderRadius:4} ]},
-    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:22}},
-      plugins:{ legend:{position:'right', labels:{color:'#0F1C3F'}},
-        tooltip:{ callbacks:{
-          label: c => `${c.dataset.label}: ${fmtN(c.raw)} cliente${c.raw===1?'':'s'}`,
-          afterLabel: c => {
-            const g = (c.dataset.gmv||[])[c.dataIndex] || 0;
-            return ['GMV da 1ª compra: ', 'GMV no mês da volta: ', 'GMV mensal perdido: '][c.dataIndex] + fmtR(g);
-          } } } },
-      scales:{ x:{ticks:{color:'#0F1C3F', font:{size:13}}, grid:{display:false}},
-               y:{beginAtZero:true, ticks:{color:'#64748B', precision:0}, grid:{color:'#EEF2F7'}} } },
-    plugins:[valueLabels]
+  PP_SERIES.forEach(s=>{
+    PP.charts[s.key] = new Chart(document.getElementById(s.canvas), {
+      type:'bar',
+      data:{ labels:[], datasets:[{label:s.label, data:[], gmv:[], backgroundColor:s.color, borderRadius:4}] },
+      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:18}},
+        plugins:{ legend:{display:false},
+          tooltip:{ callbacks:{
+            label: c => `${fmtN(c.raw)} cliente${c.raw===1?'':'s'}`,
+            afterLabel: c => `${s.gmvLbl}: ${fmtR(c.dataset.gmv[c.dataIndex]||0)}` } } },
+        scales:{ x:{ticks:{color:'#64748B', font:{size:11}}, grid:{display:false}},
+                 y:{beginAtZero:true, ticks:{color:'#64748B', precision:0}, grid:{color:'#EEF2F7'}} } },
+      plugins:[valueLabels]
+    });
   });
   ppApply();
 }
 function ppApply(){
   if(!PP) return;
-  const m = PP.m, ds = PP.chart.data.datasets;
-  ['ppMesA','ppMesB'].forEach((id,k)=>{
-    const i = parseInt(document.getElementById(id).value);
-    ds[k].label = ppMesLabel(i);
-    ds[k].data = [m.novos[i], m.recup[i], m.saidas[i]];
-    ds[k].gmv = [m.gmvNovos[i], sum(m.listas[i].recup.map(x=>x.valor)), m.perdas[i]];
+  let f = parseInt(document.getElementById('ppFrom').value), t = parseInt(document.getElementById('ppTo').value);
+  if(f > t){ t = f; document.getElementById('ppTo').value = t; }
+  const idx = []; for(let i=f;i<=t;i++) idx.push(i);
+  const labels = idx.map(ppMesLabel);
+  PP_SERIES.forEach(s=>{
+    const c = PP.charts[s.key], d = c.data.datasets[0];
+    c.data.labels = labels;
+    d.data = idx.map(i=>PP.m[s.key][i]);
+    d.gmv = idx.map(i=>PP.gmv[s.key][i]);
+    const tot = sum(d.data), totG = sum(d.gmv);
+    document.getElementById(s.canvas+'Tot').textContent = `${fmtN(tot)} no período · ${fmtR(totG)}`;
+    c.update();
   });
-  const partial = ['ppMesA','ppMesB'].some(id=>ppMesLabel(parseInt(document.getElementById(id).value)).includes('parcial'));
+  const partial = ALI.months[t] === ppCurLabel();
   document.getElementById('ppMovNote').textContent = partial
     ? `* Mês em andamento: dados até ${VT_HOJE.split('-').reverse().join('/')}.` : '';
-  PP.chart.update();
 }
 function ppReset(){
-  const n = ALI.months.length;
-  document.getElementById('ppMesA').value = Math.max(0, n-2);
-  document.getElementById('ppMesB').value = n-1;
+  const [f, t] = ppDefaultRange();
+  document.getElementById('ppFrom').value = f;
+  document.getElementById('ppTo').value = t;
   ppApply();
 }
 function resumoInit(p){
