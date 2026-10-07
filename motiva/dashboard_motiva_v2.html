@@ -1181,6 +1181,8 @@ window.cliShowSub = function(which){
       <option value="Priscila">Priscila</option>
       <option value="AGI">AGI</option>
     </select>
+    <label style="margin-left:8px;">🔍 Buscar:</label>
+    <input class="search-input" id="commSearch" placeholder="Empresa ou CNPJ..." oninput="applyComm()">
     <button class="filter-btn" onclick="resetComm()">Limpar</button>
   </div>
   <div class="kpi-grid">
@@ -2173,7 +2175,7 @@ let cCommLine,cCommBar;
   for(var i=0;i<=ldi;i++){sf.innerHTML+=`<option value="${i}">${months[i]}</option>`;st.innerHTML+=`<option value="${i}">${months[i]}</option>`;}
   sf.value=0; st.value=ldi; cFrom_c=0; cTo_c=ldi;st.value=lastDataIdx;
 })();
-function resetComm(){document.getElementById('cFrom').value=0;document.getElementById('cTo').value=lastDataIdx;document.getElementById('cVendor').value='all';applyComm();}
+function resetComm(){document.getElementById('cFrom').value=0;document.getElementById('cTo').value=lastDataIdx;document.getElementById('cVendor').value='all';var _cs=document.getElementById('commSearch');if(_cs)_cs.value='';applyComm();}
 
 function applyComm(){
   cFrom_c=parseInt(document.getElementById('cFrom').value);
@@ -6208,10 +6210,13 @@ function renderCommCompanyTable(vendor, fromIdx, toIdx){
   const title   = document.getElementById('commCompanyTitle');
   if(!section || !body) return;
 
-  if(vendor==='all'){
+  const _q=((document.getElementById('commSearch')||{}).value||'').trim().toLowerCase();
+  const _qd=_q.replace(/\D/g,'');
+  if(vendor==='all' && !_q){
     section.style.display='none';
     return;
   }
+  if(vendor==='all') vendor='Todos';
 
   // Mostrar seção imediatamente
   section.style.display='block';
@@ -6222,7 +6227,8 @@ function renderCommCompanyTable(vendor, fromIdx, toIdx){
     '<button onclick="gerarAutorizacao()" style="background:rgba(30,64,175,.15);border:1px solid rgba(30,64,175,.4);color:#60a5fa;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;margin-left:6px;">&#128196; Autorização</button>';
 
   try {
-  const companies = (typeof VD!=='undefined'&&VD[vendor])?VD[vendor]:[];
+  let companies = (typeof VD!=='undefined')?(vendor==='Todos'?Object.values(VD).reduce((a,b)=>a.concat(b),[]):(VD[vendor]||[])):[];
+  if(_q) companies=companies.filter(c=>String(c[0]).toLowerCase().includes(_q)||(_qd&&String(c[1]||'').replace(/\D/g,'').includes(_qd)));
   if(!companies.length){
     body.innerHTML='<tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">Sem dados para '+vendor+'</td></tr>';
     return;
