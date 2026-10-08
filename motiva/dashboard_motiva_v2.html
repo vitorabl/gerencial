@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<!-- TPL_V3_20261008 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel de Gestão — Motiva Benefícios</title>
@@ -234,25 +235,35 @@ table.t tr.uf{cursor:pointer}
 .mtab summary::-webkit-details-marker{display:none}
 .mtab summary::before{content:'▸';font-size:11px;transition:transform .15s;display:inline-block}
 .mtab[open] summary::before{transform:rotate(90deg)}
-.mtab table.t:not(#finRecTable) td,.mtab table.t:not(#finRecTable) th{padding:7px 6px;font-size:11.5px}
-.mtab table.t:not(#finRecTable) th{font-size:10px;letter-spacing:.02em}
-.mtab table.t:not(#finRecTable) th:first-child,.mtab table.t:not(#finRecTable) td:first-child{position:static}
+.mtab table.t:not(#finRecTable):not(#finGmvTable) td,.mtab table.t:not(#finRecTable):not(#finGmvTable) th{padding:7px 6px;font-size:11.5px}
+.mtab table.t:not(#finRecTable):not(#finGmvTable) th{font-size:10px;letter-spacing:.02em}
+.mtab table.t:not(#finRecTable):not(#finGmvTable) th:first-child,.mtab table.t:not(#finRecTable):not(#finGmvTable) td:first-child{position:static}
 #finTable tr.grp th{font-size:10.5px;color:var(--navy);background:#EFEDFB;border-bottom:1px solid var(--border);border-left:1px solid #fff;position:sticky;top:0;z-index:3}
 #finTable thead tr:not(.grp) th{position:sticky;top:var(--h1,37px);z-index:2;background:#F7F7FB}
 #finTable thead tr th:first-child{position:sticky;left:0;z-index:5;background:#F7F7FB}
 #finTable thead tr.grp th:first-child{background:#EFEDFB}
 #finTable tbody td:first-child{position:sticky;left:0;z-index:2;background:#fff;min-width:78px}
 #finTable tbody tr:hover td:first-child{background:#FAFAFE}
-#finTable tfoot td{position:sticky;bottom:0;z-index:3;background:#F7F7FB}
-#finTable tfoot td:first-child{left:0;z-index:4}
+#finTable tfoot td{background:#F7F7FB}
+#finTable tfoot td:first-child{position:sticky;left:0;z-index:4}
 #finTable{border-collapse:separate;border-spacing:0}
 #finTable tr.grp th.g-gmv{background:#E6E0FF;color:#4B2FD6;border-left:2px solid #fff}
 #finTable tr.grp th.g-rec{background:#FCE9D4;color:#8A4F0F;border-left:2px solid #fff}
 #finTable th,#finTable td{padding-left:9px;padding-right:9px}
+#finTable td.gcol{background:#FAF9FF;border-left:1px solid #EEEBFB}
+#finTable th.gcol{background:#F1EEFF;color:var(--navy)}
+#finTable td.gcol .mini{font-size:10px;font-weight:600}
+#finTable tr.pat-row td{background:#FFF8EE;color:#8A4F0F;font-size:11.5px}
+#finTable th.txcol,#finTable td.txcol{background:#FCFBF8}
 #finRecTable tr.vt-tog{cursor:pointer}
 #finRecTable tr.vt-tog:hover td{background:var(--lilac-3)}
 #finRecTable .tog{display:inline-block;width:14px;color:var(--violet-2);font-size:11px}
 #finRecTable tr.kid-row td{background:#FBFBFE;font-size:12px;color:var(--text-2)}
+#finRecTable tr.grp-h td,#finGmvTable tr.grp-h td{background:#F3F1FF;font-weight:700;color:var(--navy);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+#finRecTable tr.grp-h td:first-child,#finGmvTable tr.grp-h td:first-child{background:#F3F1FF}
+#finGmvTable tr.kid-row td{background:#FBFBFE;font-size:11px;color:var(--text-2)}
+#finRecTable tr.gord td,#finGmvTable tr.gord td{font-weight:700;background:#FAFAFD}
+#finRecTable td.fut-col,#finRecTable th.fut-col,#finGmvTable td.fut-col,#finGmvTable th.fut-col{background:#F4F4F9}
 #finRecTable .kid{padding-left:18px;display:inline-block}
 .yr-btns{display:flex;gap:4px;padding-right:8px;margin-right:4px;border-right:1px solid var(--border)}
 .yr-btns button{border:1px solid var(--border);background:#fff;border-radius:6px;padding:3px 9px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-2)}
@@ -594,22 +605,20 @@ body:not(.printing) .kpi .deltas .pill{white-space:normal}
     <div class="card" style="margin-top:14px"><div class="card-head"><div class="grow"><h3>GMV mensal</h3><div class="csub">VT + PAT empilhados · linha tracejada = meta do produto selecionado</div></div></div>
       <div class="legend" id="finLegGmv"></div>
       <div class="chart-box lg"><canvas id="chFinGmv"></canvas></div></div>
-    <div class="section-title"><h2>Receita</h2><span class="hint">VT + PAT + financiamento</span></div>
+    <div class="section-title"><h2>Receita</h2><span class="hint">receita VT = Tx Adm + 2ª via + Tx Sucesso + Financiamento · PAT</span></div>
     <div class="kpis" id="finKpisRec"></div>
     <div class="card" style="margin-top:14px"><div class="card-head"><div class="grow"><h3>Receita mensal por componente</h3><div class="csub">mesmo eixo de meses do GMV acima · linha tracejada = meta de receita</div></div></div>
       <div class="legend" id="finLegRec"></div>
-      <div class="chart-box lg"><canvas id="chFinRec"></canvas></div>
-      <details class="mtab" style="margin-top:16px"><summary>Receita por taxa, mês a mês <span class="muted" style="font-weight:400">(valores completos em R$ · segue o filtro de produto e o período)</span></summary>
-        <div style="display:flex;justify-content:flex-end;margin:8px 0"><button class="btn" onclick="exportFinRec()">Exportar Excel</button></div>
-        <div class="table-wrap" style="max-height:none"><table class="t" id="finRecTable"></table></div></details></div>
+      <div class="chart-box lg"><canvas id="chFinRec"></canvas></div></div>
+    <div class="section-title"><h2>Meta × realizado</h2><span class="hint">mês, acumulado (gordura) e o que falta até dezembro</span></div>
+    <div class="card" style="margin-top:0"><div class="card-head"><div class="grow"><h3>Meta × realizado, mês a mês</h3><div class="csub" id="finDetSub"></div></div><div class="chips" id="finDetKind"></div><div class="chips" id="finDetOpt"></div><button class="btn" onclick="exportFin()">Exportar Excel</button></div>
+      <div class="table-wrap" style="max-height:calc(100vh - 200px)"><table class="t" id="finTable"></table></div></div>
     <div class="grid g2" style="margin-top:16px">
       <div class="card"><h3>Take rate</h3><div class="csub">receita ÷ GMV, por produto</div>
         <div class="legend" id="finTRLeg" style="margin-top:10px"></div>
         <div class="chart-box sm"><canvas id="chFinTR"></canvas></div></div>
       <div class="card"><h3>Composição da receita no período</h3><div class="csub" id="finCompSub"></div><div class="barlist" id="finComp" style="margin-top:12px"></div></div>
     </div>
-    <div class="card" style="margin-top:16px"><div class="card-head"><div class="grow"><h3>Detalhe mensal</h3><div class="csub">GMV, receita e metas em uma única tabela</div></div><button class="btn" onclick="exportFin()">Exportar Excel</button></div>
-      <div class="table-wrap" style="max-height:calc(100vh - 200px)"><table class="t" id="finTable"></table></div></div>
   </section>
 
   <!-- ================= MERCADO ================= -->
@@ -19698,8 +19707,8 @@ var METAS = {
 // Situação do PAT: suspenso a partir deste mês (negociação com novo parceiro). Remova ou ajuste quando retomar.
 var PAT_STATUS = { suspensoDesde: 'Mai/26', motivo: 'negociação com novo parceiro' };
 // Financiamento é uma classe da receita de VT: Receita VT = Tx Adm + Tx Entrega (2ª via) + Tx Sucesso + Financiamento.
-// A meta de receita VT da planilha inclui o financiamento? false = compara a meta só com as taxas (Jan/26 da meta bate com as taxas sem financiamento).
-var META_REC_VT_INCLUI_FINANCIAMENTO = false;
+// A planilha compara a meta de receita VT com taxas + financiamento (ex.: Fev/26 realizado 176.847 = taxas 168.163 + financiamento 8.685).
+var META_REC_VT_INCLUI_FINANCIAMENTO = true;
 // Equipe comercial — aba Equipe_Atual do "MOTIVA_Report_Comercial_corrigido" (05/10/2026).
 // painel = nome do vendedor como aparece nos pedidos/painel. Datas da planilha lidas como dia/mês/ano.
 // Quem não está como Ativo aqui (e qualquer outro vendedor que aparece nos pedidos) é tratado como ex-colaborador.
@@ -20413,7 +20422,7 @@ function renderFin() {
 
   const sRec = recCmpSel, finTot = sum(idx.map(i => financiamento[i]));
   document.getElementById('finKpisRec').innerHTML = [
-    kpi({ cls: 'k-amber', lbl: `Receita ${prod === 'all' ? 'total' : pname} no período`, val: fBRL(sum(rSel)), sub: prod !== 'PAT' ? `inclui ${fBRL(finTot)} de financiamento (VT)` : `média ${fBRL(sum(rSel) / idx.length)}/mês` }),
+    kpi({ cls: 'k-amber', lbl: `Receita ${prod === 'all' ? 'total' : pname} no período`, val: fBRL(sum(rSel)), sub: prod !== 'PAT' ? (RVTM === RVT ? (prod === 'all' ? `VT ${fBRL(sum(idx.map(i => RVT[i])))} (taxas ${fBRL(sum(idx.map(i => RVT[i])) - finTot)} + financiamento ${fBRL(finTot)}) · PAT ${fBRL(sum(idx.map(i => recPAT[i])))}` : `taxas ${fBRL(sum(rSel) - finTot)} + financiamento ${fBRL(finTot)}`) : `taxas ${fBRL(sum(rSel) - finTot)} (base da meta) + financiamento ${fBRL(finTot)} (fora da meta)`) : `média ${fBRL(sum(rSel) / idx.length)}/mês` }),
     kpi({ cls: 'k-amber', lbl: `Receita em ${months[iL]}`, val: fBRL(rSel[lastK]), deltas: lastK > 0 ? pill(rSel[lastK], rSel[lastK - 1], 'm/m') : '' }),
     kpi({ cls: 'k-navy', lbl: 'Atingimento da meta de receita', val: attR == null ? '—' : fPct(attR, 1), sub: attR == null ? 'sem meta nos meses selecionados' : (RVTM === recVT && prod !== 'PAT' ? 'taxas (sem financiamento) ÷ meta' : 'receita ÷ meta'), prog: attR }),
     kpi({ cls: 'k-navy', lbl: 'Take rate no período', val: fPct(sum(gSel) ? sum(idx.map(i => prod === 'VT' ? recVT[i] : prod === 'PAT' ? recPAT[i] : recVT[i] + recPAT[i])) / sum(gSel) * 100 : null, 2), sub: prod === 'all' ? `VT ${fPct(sum(gV) ? sum(idx.map(i => recVT[i])) / sum(gV) * 100 : null, 2)} · PAT ${fPct(sum(gP) ? sum(idx.map(i => recPAT[i])) / sum(gP) * 100 : null, 2)}` : 'receita de taxas ÷ GMV' }),
@@ -20427,41 +20436,6 @@ function renderFin() {
   document.getElementById('finLegRec').innerHTML = leg([prod !== 'PAT' && [COL.vt, 'Tx Adm + 2ª via (VT)'], prod !== 'PAT' && [COL.c4, 'Tx Sucesso (VT)'], prod !== 'VT' && [COL.pat, 'Receita PAT'], prod !== 'PAT' && [COL.c3, 'Financiamento (VT)'], [null, 'Meta', 1]].filter(Boolean));
   chart('chFinRec', { view: V, data: { labels: cL, datasets: dsR }, options: baseOpts({ stacked: true, band, footer: it => { const k = it[0].dataIndex; if (cIdx[k] > LAST) return 'Mês a realizar · só meta'; return [`Total: ${fTip(cRSel[k])}`, cMetaR[k] ? `Atingimento (taxas): ${fPct(cRCmp[k] / cMetaR[k] * 100, 1)}` : ''].filter(Boolean).join('\n'); } }) });
 
-  // tabela de receita por taxa (linhas = taxa, colunas = meses)
-  const R = [];
-  const sw = c => `<span class="sw" style="background:${c}"></span>`;
-  if (prod !== 'PAT') {
-    R.push({ n: `<span class="tog">${FIN_VT_OPEN ? '▾' : '▸'}</span>Receita VT <span class="muted" style="font-weight:400;font-size:11px">${FIN_VT_OPEN ? '' : '(Tx Adm + 2ª via + Tx Sucesso + Financiamento)'}</span>`, x: 'Receita VT', v: idx.map(i => RVT[i]), cls: 'sub vt-tog' });
-    if (FIN_VT_OPEN) {
-      R.push({ n: '<span class="kid">' + sw(COL.vt) + 'Tx Administrativa</span>', x: '  Tx Administrativa (VT)', v: idx.map(i => vtTxAdm[i]), cls: 'kid-row' });
-      R.push({ n: '<span class="kid">' + sw(COL.vt) + 'Tx Entrega — 2ª via</span>', x: '  Tx Entrega — 2ª via (VT)', v: idx.map(i => vtTxEntrega[i]), cls: 'kid-row' });
-      R.push({ n: '<span class="kid">' + sw(COL.c4) + 'Tx Sucesso</span>', x: '  Tx Sucesso (VT)', v: idx.map(i => vtTxSucesso[i]), cls: 'kid-row' });
-      R.push({ n: '<span class="kid">' + sw(COL.c3) + 'Financiamento</span>', x: '  Financiamento (VT)', v: idx.map(i => financiamento[i]), cls: 'kid-row' });
-    }
-  }
-  if (prod !== 'VT') R.push({ n: sw(COL.pat) + 'Receita PAT', x: 'Receita PAT', v: idx.map(i => recPAT[i]) });
-  R.push({ n: 'Receita total', x: 'Receita total', v: rSel, cls: 'total' });
-  R.push({ n: 'Meta', x: 'Meta', v: metaR, meta: true });
-  R.push({ n: '% da meta', x: '% da meta', v: metaR.map((m, k) => m ? sRec[k] / m * 100 : null), pct: true });
-  if (prod !== 'PAT') R.push({ n: 'Take rate VT', x: 'Take rate VT (%)', v: idx.map(i => gmvVT[i] ? recVT[i] / gmvVT[i] * 100 : null), pct: true, dec: 2 });
-  const FI = (ST.fut != null && ST.ref == null) ? range(LAST + 1, ST.fut) : [];
-  const metaF = FI.map(i => metaTot('rec', i, prod));
-  R.forEach(row => { row.f = FI.map((_, k) => row.meta ? metaF[k] : null); });
-  FIN_REC = { R, idx, FI };
-  const cell = (row, v) => v == null ? '<span class="muted">—</span>' : row.pct ? `<span class="${row.dec ? '' : attCls(v)}">${fPct(v, row.dec || 0)}</span>` : (row.meta ? `<span class="muted">${fInt(v)}</span>` : fInt(v));
-  const totOf = row => {
-    if (row.n === '% da meta') { const ks = metaR.map((m, k) => m != null ? k : -1).filter(k => k >= 0); const m = sum(ks.map(k => metaR[k])); return m ? sum(ks.map(k => sRec[k])) / m * 100 : null; }
-    if (row.dec) { const g = sum(idx.map(i => gmvVT[i])); return g ? sum(idx.map(i => recVT[i])) / g * 100 : null; }
-    return row.v.some(v => v != null) ? sum(row.v) : null;
-  };
-  const fCell = (row, v) => row.meta && v != null ? `<span class="muted">${fInt(v)}</span>` : '<span class="muted">—</span>';
-  const fTot = row => row.meta ? `<b>${fCell(row, sum(row.f.filter(v => v != null)))}</b>` : '<span class="muted">—</span>';
-  document.getElementById('finRecTable').innerHTML = '<thead><tr><th>Taxa</th>' + idx.map(i => `<th class="r">${months[i]}</th>`).join('')
-    + FI.map(i => `<th class="r fut-col" title="Mês a realizar: só a meta">${months[i]}<br><span style="font-weight:500;text-transform:none">a realizar</span></th>`).join('')
-    + `<th class="r">${FI.length ? `Total<br><span style="font-weight:500;text-transform:none">realizado</span>` : 'Total'}</th>` + (FI.length ? `<th class="r fut-col">Meta<br><span style="font-weight:500;text-transform:none">${months[FI[0]]}–${months[FI[FI.length - 1]]}</span></th>` : '') + '</tr></thead><tbody>' +
-    R.map(row => `<tr class="${row.cls || ''}"><td>${row.n}</td>` + row.v.map(v => `<td class="r">${cell(row, v)}</td>`).join('') + row.f.map(v => `<td class="r fut-col">${fCell(row, v)}</td>`).join('') + `<td class="r"><b>${cell(row, totOf(row))}</b></td>` + (FI.length ? `<td class="r fut-col">${fTot(row)}</td>` : '') + '</tr>').join('') + '</tbody>';
-  FIN_REC.tot = R.map(totOf);
-  const tg = document.querySelector('#finRecTable tr.vt-tog'); if (tg) tg.onclick = () => { FIN_VT_OPEN = !FIN_VT_OPEN; renderFin(); };
 
   const trDs = [];
   if (prod !== 'PAT') trDs.push(lineDs('VT', cIdx.map(i => gmvVT[i] ? recVT[i] / gmvVT[i] * 100 : null), COL.vt));
@@ -20479,62 +20453,81 @@ function renderFin() {
   barlist('finComp', comp);
   document.getElementById('finCompSub').innerHTML = `${months[pA]} a ${months[pZ]} · total ${fBRL(ct)}`;
 
-  const rows = idx.map(i => {
-    const mg = metaTot('gmv', i, 'all'), mr = metaTot('rec', i, 'all');
-    const mgv = metaOf('VT', 'gmv', i), mgp = metaOf('PAT', 'gmv', i), mrv = metaOf('VT', 'rec', i), mrp = metaOf('PAT', 'rec', i);
-    const at = (r, m) => m ? r / m * 100 : null;
-    return { i, mes: mLabel(i), gv: gmvVT[i], mgv, agv: at(gmvVT[i], mgv), gp: gmvPAT[i], mgp, agp: at(gmvPAT[i], mgp), gt: S.gmvTot[i], mg, ag: at(S.gmvTot[i], mg),
-      rv: RVT[i], mrv, arv: at(RVTM[i], mrv), rp: recPAT[i], mrp, arp: at(recPAT[i], mrp), fi: financiamento[i], rt: S.recTot[i], mr, ar: at(RVTM[i] + recPAT[i], mr),
-      trv: gmvVT[i] ? recVT[i] / gmvVT[i] * 100 : null, trp: gmvPAT[i] ? recPAT[i] / gmvPAT[i] * 100 : null };
+  drawFinDet(idx, prod);
+}
+// meta × realizado (tabela única da página): GMV ou Receita; VT em destaque, PAT e total quando fizerem sentido
+function drawFinDet(idx, prod) {
+  const K = ST.finDet || 'gmv', GMV = K === 'gmv', kind = GMV ? 'gmv' : 'rec';
+  const FI = (ST.fut != null && ST.ref == null) ? range(LAST + 1, ST.fut) : [];
+  const isF = i => i > LAST, hasMeta = i => metaOf('VT', 'gmv', i) != null || metaOf('PAT', 'gmv', i) != null;
+  const ms = idx.concat(FI).filter(hasMeta), noMeta = idx.length - idx.filter(hasMeta).length;
+  const patOff = PAT_FROM >= 0 && PAT_FROM <= idx[idx.length - 1];          // PAT suspenso dentro do período
+  const showAll = prod === 'all' && (!patOff || ST.finShowPat);
+  const prods = prod === 'all' ? (showAll ? ['VT', 'PAT', 'tot'] : ['VT']) : [prod];
+  const vtIn = prods.includes('VT') || prods.includes('tot');
+  const txOpen = !GMV && vtIn && ST.finTx, finCol = RVTM !== RVT ? (!GMV && vtIn) : txOpen;
+  document.getElementById('finDetKind').innerHTML = [['gmv', 'GMV'], ['rec', 'Receita']].map(([k, t]) => `<button class="chip ${K === k ? 'on' : ''}" onclick="ST.finDet='${k}';renderFin()">${t}</button>`).join('');
+  document.getElementById('finDetOpt').innerHTML = (prod === 'all' && patOff ? `<button class="chip ${ST.finShowPat ? 'on' : ''}" onclick="ST.finShowPat=!ST.finShowPat;renderFin()">${ST.finShowPat ? '✓ ' : ''}PAT e total</button>` : '')
+    + (!GMV && vtIn ? `<button class="chip ${ST.finTx ? 'on' : ''}" onclick="ST.finTx=!ST.finTx;renderFin()">${ST.finTx ? '▾' : '▸'} Composição</button>` : '');
+  const real = (p, i) => isF(i) ? null : GMV ? (p === 'VT' ? gmvVT[i] : p === 'PAT' ? gmvPAT[i] : S.gmvTot[i]) : (p === 'VT' ? RVTM[i] : p === 'PAT' ? recPAT[i] : RVTM[i] + recPAT[i]);
+  const meta = (p, i) => p === 'tot' ? metaTot(kind, i, 'all') : metaOf(p, kind, i);
+  const nm = p => p === 'tot' ? 'Total' : p;
+  document.getElementById('finDetSub').textContent = (GMV ? 'GMV' : 'Receita') + ' · gordura = realizado acumulado − meta acumulada (meses com meta)'
+    + (!GMV && vtIn ? (RVTM !== RVT ? ' · receita VT = taxas (base da meta); financiamento à parte, fora da meta' : ' · receita VT = Tx Adm + 2ª via + Tx Sucesso + Financiamento (abra "Composição")') : '')
+    + (prod === 'all' && patOff && !showAll ? ` · PAT suspenso desde ${PAT_STATUS.suspensoDesde}: resumo no rodapé` : '')
+    + (noMeta ? ` · ${noMeta} ${noMeta > 1 ? 'meses' : 'mês'} sem meta fora da tabela` : '');
+  const acc = {}; prods.forEach(p => { acc[p] = { r: 0, m: 0 }; });
+  const rows = ms.map(i => {
+    const o = { i, fut: isF(i) };
+    prods.forEach(p => {
+      const r = real(p, i), m = meta(p, i); o[p + 'r'] = r; o[p + 'm'] = m; o[p + 'p'] = r != null && m ? r / m * 100 : null;
+      if (!isF(i) && m != null && r != null) { acc[p].r += r; acc[p].m += m; o[p + 'g'] = acc[p].r - acc[p].m; o[p + 'a'] = acc[p].r / acc[p].m * 100; } else { o[p + 'g'] = null; o[p + 'a'] = null; }
+    });
+    if (!isF(i)) { o.adm = vtTxAdm[i] + vtTxEntrega[i]; o.suc = vtTxSucesso[i]; o.fin = financiamento[i]; }
+    return o;
   });
-  const FIr = (ST.fut != null && ST.ref == null) ? range(LAST + 1, ST.fut) : [];
-  const futRows = FIr.map(i => ({ i, fut: true, _cls: 'fut-row', mes: months[i], mgv: metaOf('VT', 'gmv', i), mgp: metaOf('PAT', 'gmv', i), mg: metaTot('gmv', i, 'all'), mrv: metaOf('VT', 'rec', i), mrp: metaOf('PAT', 'rec', i), mr: metaTot('rec', i, 'all') }));
-  FIN_ROWS = rows.concat(futRows);
-  const pc = v => v == null ? '<span class="muted">—</span>' : `<span class="${attCls(v)}">${fPct(v, 0)}</span>`;
-  const m = v => v == null ? '<span class="muted">—</span>' : `<span class="muted">${fBRL(v)}</span>`;
-  const T = k => sum(rows.map(r => r[k] || 0));
-  // % do período: soma só os meses que têm meta
-  const TA = (rk, mk, real) => { const ks = rows.filter(r => r[mk] != null); const me = sum(ks.map(r => r[mk])); return me ? sum(ks.map(r => real ? real(r) : r[rk])) / me * 100 : null; };
-  const susp = r => patSuspended(r.i) ? '<span class="pill warn">suspenso</span>' : fBRL(0);
-  const FCOLS = [
-    { k: 'i', t: 'Mês', f: r => `<b>${r.mes}</b>` },
-    { k: 'gv', t: 'Realizado', cls: 'r', f: r => fBRL(r.gv) }, { k: 'mgv', t: 'Meta', cls: 'r', f: r => m(r.mgv) }, { k: 'agv', t: '%', cls: 'r', f: r => pc(r.agv) },
-    { k: 'gp', t: 'Realizado', cls: 'r', f: r => r.gp ? fBRL(r.gp) : susp(r) }, { k: 'mgp', t: 'Meta', cls: 'r', f: r => m(r.mgp) }, { k: 'agp', t: '%', cls: 'r', f: r => pc(r.agp) },
-    { k: 'gt', t: 'Realizado', cls: 'r', f: r => `<b>${fBRL(r.gt)}</b>` }, { k: 'mg', t: 'Meta', cls: 'r', f: r => m(r.mg) }, { k: 'ag', t: '%', cls: 'r', f: r => pc(r.ag) },
-    { k: 'rv', t: 'Realizado', cls: 'r', f: r => fBRL(r.rv) }, { k: 'mrv', t: 'Meta', cls: 'r', f: r => m(r.mrv) }, { k: 'arv', t: '%', cls: 'r', f: r => pc(r.arv) },
-    { k: 'rp', t: 'Realizado', cls: 'r', f: r => r.rp ? fBRL(r.rp) : susp(r) }, { k: 'mrp', t: 'Meta', cls: 'r', f: r => m(r.mrp) }, { k: 'arp', t: '%', cls: 'r', f: r => pc(r.arp) },
-    { k: 'rt', t: 'Realizado', cls: 'r', f: r => `<b>${fBRL(r.rt)}</b>` }, { k: 'mr', t: 'Meta', cls: 'r', f: r => m(r.mr) }, { k: 'ar', t: '%', cls: 'r', f: r => pc(r.ar) },
-    { k: 'trv', t: 'VT', cls: 'r', f: r => fPct(r.trv, 2) }, { k: 'trp', t: 'PAT', cls: 'r', f: r => r.trp == null ? '<span class="muted">—</span>' : fPct(r.trp, 2) },
-  ];
-  const keepVT = ['gv', 'mgv', 'agv', 'rv', 'mrv', 'arv', 'trv'], keepPAT = ['gp', 'mgp', 'agp', 'rp', 'mrp', 'arp', 'trp'];
-  const META_K = ['mgv', 'mgp', 'mg', 'mrv', 'mrp', 'mr'];
-  FCOLS.forEach(c => { const f = c.f; c.f = r => !r.fut ? f(r) : (c.k === 'i' ? `<b>${r.mes}</b> <span class="pill info" style="font-size:10px">a realizar</span>` : (META_K.includes(c.k) ? f(r) : '<span class="muted">—</span>')); });
-  const fcols = FCOLS.filter(c => c.k === 'i' || prod === 'all' || (prod === 'VT' ? keepVT : keepPAT).includes(c.k));
-  const TF = k => sum(futRows.map(r => r[k] || 0));
-  const futFoot = futRows.length ? [{ cls: 'fut-foot', cells: { i: `Meta ${months[FIr[0]]}–${months[FIr[FIr.length - 1]]}`, mgv: fBRL(TF('mgv')), mgp: fBRL(TF('mgp')), mg: fBRL(TF('mg')), mrv: fBRL(TF('mrv')), mrp: fBRL(TF('mrp')), mr: fBRL(TF('mr')) } },
-    { cls: 'fut-foot', cells: { i: 'Falta para a meta', gv: '', mgv: (() => { const f = T('mgv') + TF('mgv') - sum(rows.filter(r => r.mgv != null).map(r => r.gv)); return f > 0 ? `<b>${fBRL(f)}</b>` : 'coberta'; })(), mrv: (() => { const f = T('mrv') + TF('mrv') - sum(rows.filter(r => r.mrv != null).map(r => RVTM[r.i])); return f > 0 ? `<b>${fBRL(f)}</b>` : 'coberta'; })(), mg: (() => { const f = T('mg') + TF('mg') - sum(rows.filter(r => r.mg != null).map(r => r.gt)); return f > 0 ? `<b>${fBRL(f)}</b>` : 'coberta'; })(),
-      mgp: (() => { const f = T('mgp') + TF('mgp') - sum(rows.filter(r => r.mgp != null).map(r => r.gp)); return f > 0 ? `<b>${fBRL(f)}</b>` : 'coberta'; })(),
-      mrp: (() => { const f = T('mrp') + TF('mrp') - sum(rows.filter(r => r.mrp != null).map(r => r.rp)); return f > 0 ? `<b>${fBRL(f)}</b>` : 'coberta'; })(),
-      mr: (() => { const f = T('mr') + TF('mr') - sum(rows.filter(r => r.mr != null).map(r => RVTM[r.i] + r.rp)); return f > 0 ? `<b>${fBRL(f)}</b>` : 'coberta'; })() } }] : [];
-  const grpHead = prod === 'all'
-    ? '<tr class="grp"><th></th><th colspan="3" class="c g-gmv">GMV VT</th><th colspan="3" class="c g-gmv">GMV PAT</th><th colspan="3" class="c g-gmv">GMV total</th><th colspan="3" class="c g-rec">Receita VT (c/ financ.)</th><th colspan="3" class="c g-rec">Receita PAT</th><th colspan="3" class="c g-rec">Receita total</th><th colspan="2" class="c">Take rate</th></tr>'
-    : `<tr class="grp"><th></th><th colspan="3" class="c g-gmv">GMV ${prod}</th><th colspan="3" class="c g-rec">Receita ${prod}${prod === 'VT' ? ' (c/ financ.)' : ''}</th><th class="c">Take rate</th></tr>`;
-  table('finTable', fcols, rows.concat(futRows), { sortKey: 'i', asc: true, footRows: futFoot,
-    total: { i: futRows.length ? 'Total realizado' : 'Total', gv: fBRL(T('gv')), mgv: fBRL(T('mgv')), agv: pc(TA('gv', 'mgv')), gp: fBRL(T('gp')), mgp: fBRL(T('mgp')), agp: pc(TA('gp', 'mgp')), gt: fBRL(T('gt')), mg: fBRL(T('mg')), ag: pc(TA('gt', 'mg')),
-      rv: fBRL(T('rv')), mrv: fBRL(T('mrv')), arv: pc(TA('rv', 'mrv', r => RVTM[r.i])), rp: fBRL(T('rp')), mrp: fBRL(T('mrp')), arp: pc(TA('rp', 'mrp')), fi: fBRL(T('fi')), rt: fBRL(T('rt')), mr: fBRL(T('mr')), ar: pc(TA('rt', 'mr', r => RVTM[r.i] + r.rp)),
-      trv: fPct(T('gv') ? sum(rows.map(r => recVT[r.i])) / T('gv') * 100 : null, 2), trp: fPct(T('gp') ? T('rp') / T('gp') * 100 : null, 2) },
-    onFoot: el => { const th = el.querySelector('thead'); if (th && !th.querySelector('tr.grp')) th.insertAdjacentHTML('afterbegin', grpHead); const g = el.querySelector('thead tr.grp'); if (g) el.style.setProperty('--h1', g.offsetHeight + 'px'); } });
+  const m0 = v => v == null ? '<span class="muted">—</span>' : `<span class="muted">${fBRL(v)}</span>`;
+  const pc = v => v == null ? '<span class="muted">—</span>' : `<b class="${attCls(v)}">${fPct(v, 0)}</b>`;
+  const gd = g => g == null ? '<span class="muted">—</span>' : `<b class="${g >= 0 ? 'g-txt' : 'b-txt'}">${g >= 0 ? '+' : '−'}${fBRLtxt(Math.abs(g))}</b>`;
+  const rv = (r, p) => r.fut ? '<span class="muted">—</span>' : (p === 'PAT' && !r[p + 'r'] && patSuspended(r.i) ? '<span class="pill warn">suspenso</span>' : fBRL(r[p + 'r']));
+  const cols = [{ k: 'i', t: 'Mês', f: r => `<b>${months[r.i]}</b>${r.fut ? ' <span class="pill info" style="font-size:10px">a realizar</span>' : ''}` }], grp = ['<th></th>'];
+  prods.forEach(p => {
+    cols.push({ k: p + 'm', t: 'Meta', cls: 'r', f: r => m0(r[p + 'm']) }, { k: p + 'r', t: 'Realizado', cls: 'r', f: r => rv(r, p) }, { k: p + 'p', t: '% mês', cls: 'r', f: r => pc(r[p + 'p']) },
+      { k: p + 'g', t: 'Gordura acum.', cls: 'r gcol', v: r => r[p + 'g'] ?? -1e15, f: r => gd(r[p + 'g']) });
+    grp.push(`<th colspan="4" class="c ${GMV ? 'g-gmv' : 'g-rec'}">${GMV ? 'GMV' : 'Receita'} ${nm(p)}${!GMV && p !== 'PAT' && RVTM !== RVT ? ' (taxas)' : ''}</th>`);
+  });
+  const mut = v => `<span class="muted">${fBRL(v)}</span>`, dash = '<span class="muted">—</span>';
+  if (txOpen) { cols.push({ k: 'adm', t: 'Tx Adm + 2ª via', cls: 'r txcol', f: r => r.fut ? dash : mut(r.adm) }, { k: 'suc', t: 'Tx Sucesso', cls: 'r txcol', f: r => r.fut ? dash : mut(r.suc) }); grp.push(`<th colspan="${RVTM === RVT ? 3 : 2}" class="c">${RVTM === RVT ? 'Composição da receita VT' : 'Taxas VT'}</th>`); }
+  if (finCol) { cols.push({ k: 'fin', t: 'Financiamento', cls: 'r txcol', f: r => r.fut ? dash : mut(r.fin) }); if (RVTM !== RVT) grp.push('<th class="c">Fora da meta</th>'); }
+  // rodapé
+  const real_ = rows.filter(r => !r.fut), fut_ = rows.filter(r => r.fut);
+  const tot = { i: 'Total' }, fm = { i: fut_.length ? `Meta ${months[fut_[0].i]}–${months[fut_[fut_.length - 1].i]}` : '' }, fl = { i: 'Falta até ' + (fut_.length ? months[fut_[fut_.length - 1].i] : '') };
+  prods.forEach(p => {
+    const ks = real_.filter(r => r[p + 'm'] != null && r[p + 'r'] != null), R = sum(ks.map(r => r[p + 'r'])), M = sum(ks.map(r => r[p + 'm']));
+    tot[p + 'm'] = fBRL(M); tot[p + 'r'] = `<b>${fBRL(R)}</b>`; tot[p + 'p'] = M ? pc(R / M * 100) : ''; tot[p + 'g'] = M ? `${gd(R - M)}<div class="mini ${attCls(R / M * 100)}">${fPct(R / M * 100, 1)} da meta</div>` : '';
+    const F = sum(fut_.map(r => r[p + 'm'] || 0)), falta = M + F - R; fm[p + 'm'] = F ? fBRL(F) : ''; fl[p + 'm'] = F ? (falta > 0 ? `<b class="b-txt">${fBRL(falta)}</b>` : '<span class="g-txt">coberta</span>') : '';
+    if (F && falta > 0) fl[p + 'r'] = `<span class="muted">${fBRLtxt(falta / fut_.length)}/mês</span>`;
+  });
+  if (txOpen) { tot.adm = mut(sum(real_.map(r => r.adm))); tot.suc = mut(sum(real_.map(r => r.suc))); }
+  if (finCol) tot.fin = mut(sum(real_.map(r => r.fin)));
+  const foot = fut_.length ? [{ cls: 'fut-foot', cells: fm }, { cls: 'fut-foot', cells: fl }] : [];
+  if (prod === 'all' && patOff && !showAll) {
+    const pi = idx.filter(i => metaOf('PAT', kind, i) != null), pM = sum(pi.map(i => metaOf('PAT', kind, i))), pR = sum(pi.map(i => (GMV ? gmvPAT[i] : recPAT[i]) || 0));
+    const lost = sum(pi.filter(i => i >= PAT_FROM).map(i => metaOf('PAT', kind, i)));
+    const c = { i: `<b>PAT</b> <span class="pill warn" style="font-size:10px">suspenso desde ${PAT_STATUS.suspensoDesde}</span>` };
+    c[cols[1].k] = fBRL(pM); c[cols[2].k] = `<b>${fBRL(pR)}</b>`; c[cols[3].k] = pM ? pc(pR / pM * 100) : '';
+    c[cols[4].k] = pM ? `${gd(pR - pM)}<div class="mini">${fBRLtxt(lost)} de meta nos meses suspensos</div>` : '';
+    foot.push({ cls: 'pat-row', cells: c });
+  }
+  FIN_ROWS = { rows, prods, K, finCol, txOpen };
+  table('finTable', cols, rows, { sortKey: 'i', asc: true, resetSort: true, total: tot, footRows: foot,
+    onFoot: el => { const th = el.querySelector('thead'); if (th && !th.querySelector('tr.grp')) th.insertAdjacentHTML('afterbegin', '<tr class="grp">' + grp.join('') + '</tr>'); const g = el.querySelector('thead tr.grp'); if (g) el.style.setProperty('--h1', g.offsetHeight + 'px'); } });
 }
-let FIN_ROWS = [], FIN_REC = null, FIN_VT_OPEN = false;
-function exportFinRec() {
-  if (!FIN_REC) return;
-  const FI = FIN_REC.FI || [], rd = v => v == null ? '' : Math.round(v * 100) / 100;
-  xlsx('receita_por_taxa', ['Taxa'].concat(FIN_REC.idx.map(i => months[i]), FI.map(i => months[i] + ' (a realizar)'), ['Total realizado'], FI.length ? ['Meta a realizar'] : []), FIN_REC.R.map((row, k) => [row.x].concat(row.v.map(rd), row.f.map(rd), [rd(FIN_REC.tot[k])], FI.length ? [row.meta ? rd(sum(row.f.filter(v => v != null))) : ''] : [])));
-}
+let FIN_ROWS = null, FIN_VT_OPEN = false;
 function exportFin() {
-  xlsx('financeiro_mensal', ['Mês', 'GMV VT', 'Meta GMV VT', '% meta GMV VT', 'GMV PAT', 'Meta GMV PAT', '% meta GMV PAT', 'GMV total', 'Meta GMV total', '% meta GMV total',
-    'Receita VT', 'Meta receita VT', '% meta receita VT', 'Receita PAT', 'Meta receita PAT', '% meta receita PAT', 'Financiamento', 'Receita total', 'Meta receita (taxas)', '% meta receita', 'Take rate VT %', 'Take rate PAT %'],
-    FIN_ROWS.map(r => [months[r.i], r.gv, r.mgv, r.agv, r.gp, r.mgp, r.agp, r.gt, r.mg, r.ag, r.rv, r.mrv, r.arv, r.rp, r.mrp, r.arp, r.fi, r.rt, r.mr, r.ar, r.trv, r.trp]));
+  if (!FIN_ROWS) return; const { rows, prods, K, finCol, txOpen } = FIN_ROWS, nm = p => p === 'tot' ? 'Total' : p, rd = v => v == null ? '' : Math.round(v * 100) / 100;
+  const H = ['Mês'].concat(...prods.map(p => [`Meta ${nm(p)}`, `${K === 'gmv' ? 'GMV' : 'Receita'} ${nm(p)} realizado`, `% mês ${nm(p)}`, `Gordura acumulada ${nm(p)}`, `% acumulado ${nm(p)}`]), txOpen ? ['Tx Adm + 2ª via', 'Tx Sucesso'] : [], finCol ? [RVTM === RVT ? 'Financiamento VT' : 'Financiamento VT (fora da meta)'] : []);
+  xlsx(K === 'gmv' ? 'meta_x_realizado_gmv' : 'meta_x_realizado_receita', H, rows.map(r => [months[r.i] + (r.fut ? ' (a realizar)' : '')].concat(...prods.map(p => [rd(r[p + 'm']), rd(r[p + 'r']), rd(r[p + 'p']), rd(r[p + 'g']), rd(r[p + 'a'])]), txOpen ? [rd(r.adm), rd(r.suc)] : [], finCol ? [rd(r.fin)] : [])));
 }
 
 
