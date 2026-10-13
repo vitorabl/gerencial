@@ -511,6 +511,13 @@ body:not(.printing) #retTable td.grp,body:not(.printing) #allTable td.grp{max-wi
 body:not(.printing) #retTable td:last-child{font-size:11px}
 body:not(.printing) .kpi .deltas .pill{white-space:normal}
 }
+.btn-sair-portal{display:flex;align-items:center;gap:10px;margin:0 12px 14px;padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit}
+.btn-sair-portal:hover{background:var(--violet);border-color:var(--violet)}
+.btn-sair-portal svg{flex:none}
+body.collapsed .btn-sair-portal{justify-content:center;padding:10px 0}
+body.collapsed .btn-sair-portal span{display:none}
+body.printing .btn-sair-portal{display:none!important}
+@media print{.btn-sair-portal{display:none!important}}
 </style>
 </head>
 <body>
@@ -526,7 +533,7 @@ body:not(.printing) .kpi .deltas .pill{white-space:normal}
     <button onclick="checkAuth()" style="width:100%;padding:12px;background:#6A4BFF;border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;">Entrar</button>
   </div>
 </div>
-<button id="btn-logout" onclick="doLogout()" title="Trocar acesso" style="display:none;position:fixed;right:14px;bottom:14px;z-index:9999;background:#2D2D59;border:0;color:#fff;padding:7px 13px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;opacity:.85;">🔓 Sair</button>
+<button id="btn-logout" onclick="doLogout()" title="Trocar acesso" style="display:none;position:fixed;right:14px;bottom:14px;z-index:9999;background:#2D2D59;border:0;color:#fff;padding:7px 13px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;opacity:.85;">🔓 Trocar acesso</button>
 
 <aside class="sidebar" id="sidebar">
   <div class="side-logo">
@@ -539,6 +546,7 @@ body:not(.printing) .kpi .deltas .pill{white-space:normal}
   <button class="side-collapse" onclick="toggleCollapse()" title="Recolher menu"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
   <nav class="side-nav" id="sideNav"></nav>
   <div class="side-foot" id="sideFoot"></div>
+  <button class="btn-sair-portal" id="btn-sair-portal" onclick="sairPainel()" title="Sair e voltar ao portal Gerencial (VTDireto, KIM+ e demais painéis)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span>Sair · outros painéis</span></button>
 </aside>
 
 <div class="main">
@@ -21781,6 +21789,12 @@ function checkAuth(){
     err.textContent = 'Senha incorreta. Tente novamente.';
     document.getElementById('auth-input').value = ''; document.getElementById('auth-input').focus();
   }
+}
+// Sair: encerra a sessao deste painel e volta para a landing page do portal Gerencial
+// (raiz do site, um nivel acima — caminho relativo, independe do nome do repositorio).
+function sairPainel(){
+  try { sessionStorage.removeItem(AUTH_KEY); } catch(e) {}
+  window.location.href = '../';
 }
 function doLogout(){
   try{ sessionStorage.removeItem(AUTH_KEY); }catch(e){}

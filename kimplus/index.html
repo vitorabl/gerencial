@@ -79,6 +79,9 @@
   .tag.status-recorrente { color: var(--accent4); }
   .tag.status-novo { color: var(--accent2); }
   .tag.status-inativo { color: var(--danger); }
+.btn-sair-portal { display:inline-flex; align-items:center; gap:6px; background:transparent; border:1px solid var(--border); color:var(--text); padding:6px 12px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; }
+.btn-sair-portal:hover { border-color:var(--accent); background:var(--accent); color:#fff; }
+@media print { .btn-sair-portal { display:none !important; } }
 </style>
 </head>
 <body>
@@ -107,6 +110,8 @@
     <div style="display:flex;gap:8px;align-items:center;">
       <span class="badge" id="periodo-badge">—</span>
       <span class="gap-badge" id="gap-badge" style="display:none;"></span>
+    
+      <button class="btn-sair-portal" id="btn-sair-portal" onclick="sairPainel()" title="Sair e voltar ao portal Gerencial (Motiva, VTDireto e demais painéis)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Sair · outros painéis</button>
     </div>
   </div>
 
@@ -252,6 +257,12 @@ var AUTH_KEY = 'kimplus_auth';
   }
 })();
 
+// Sair: encerra a sessao deste painel e volta para a landing page do portal Gerencial
+// (raiz do site, um nivel acima — caminho relativo, independe do nome do repositorio).
+function sairPainel(){
+  try { sessionStorage.removeItem(AUTH_KEY); } catch(e) {}
+  window.location.href = '../';
+}
 function checkAuth(){
   var v = document.getElementById('auth-input').value;
   if (v === SENHA_KIM) {
