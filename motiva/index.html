@@ -21427,7 +21427,7 @@ const crRows = v => v === CR_ALL ? Object.keys(VDROWS).flatMap(vn => (VDROWS[vn]
 const crSum = (rows, f, set) => sum(rows.map(o => sum(set.map(i => (o.x[f][i] || 0)))));
 const crSumC = (rows, set) => sum(rows.map(o => sum(set.map(i => (o.x.com[i] || 0) > 0 ? (o.x.rec[i] || 0) : 0))));
 function crTypical(rows) {   // % de comissão mais comum (mediana empresa×mês com receita e comissão)
-  const v = []; rows.forEach(o => o.x.com.forEach((c, i) => { const r = o.x.rec[i] || 0; if (c > 0 && r > 0) v.push(c / r * 100); }));
+  const v = []; rows.forEach(o => { const f = o.x.com.findIndex(c => c > 0); o.x.com.forEach((c, i) => { const r = o.x.rec[i] || 0; if (c > 0 && r > 0 && !(o.vn === 'AGI' && i === f)) v.push(c / r * 100); }); });
   if (!v.length) return null; v.sort((a, b) => a - b); return v[Math.floor(v.length / 2)];
 }
 function crVendOptions() {
@@ -21436,6 +21436,39 @@ function crVendOptions() {
   const act = names.filter(n => ACTIVE.has(n)).sort((a, b) => tot(b) - tot(a)), ex = names.filter(n => !ACTIVE.has(n)).sort((a, b) => tot(b) - tot(a));
   return { act, ex, all: act.concat(ex) };
 }
+// Vigência oficial do comissionamento por cliente — Regras de Comissionamento (19/01/2026):
+// Executivo de Vendas (e demais cargos comerciais) 10 meses · AGI 11 meses · SDR 1 mês (só o 1º mês).
+// Ex-colaboradores sem cargo cadastrado e com % padrão ≥ 50% são tratados como SDR (regra de 55%).
+const CR_MES3 = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+function crVig(vn, typ) {
+  const p = PESSOA[vn] || {}, cg = String(p.cargo || '').toLowerCase();
+  if (vn === 'AGI' || cg.includes('parceiro')) return 11;
+  if (cg.includes('sdr') || cg.includes('inside') || (!p.cargo && typ != null && typ >= 50)) return 1;
+  return 10;
+}
+function crMonLbl(i) {
+  if (i < months.length) return months[i];
+  const [m, y] = months[months.length - 1].split('/'); let mi = CR_MES3.indexOf(m) + (i - months.length + 1), yy = +y;
+  yy += Math.floor(mi / 12); mi %= 12; return CR_MES3[mi] + '/' + String(yy).padStart(2, '0');
+}
+function crVigInfo(x, vn, typ, end) {
+  const cm = x.com.map((c, i) => c > 0 ? i : -1).filter(i => i >= 0); if (!cm.length) return null;
+  const vig = crVig(vn, typ), ini = cm[0], fimV = ini + vig - 1, faltam = Math.max(0, vig - (end - ini + 1));
+  return { vig, ini, fimV, faltam, pagos: cm.filter(i => i <= end).length };
+}
+// % esperado da comissão no mês i: AGI paga 20% no 1º mês comissionado do cliente e 10% depois; os demais, o % padrão do vendedor
+function crExpPct(vn, x, i, typ) {
+  if (vn === 'AGI') { const f = x.com.findIndex(c => c > 0); return i === f ? 20 : 10; }
+  return typ;
+}
+// empresa fora do % esperado (compara a comissão do período com a esperada mês a mês; tolerância 0,5 p.p.)
+function crOffStd(e, typ, set) {
+  if (e.rc <= 0) return false;
+  if (e.o.vn !== 'AGI' && typ == null) return false;
+  const exp = sum(set.map(i => (e.o.x.com[i] || 0) > 0 ? (e.o.x.rec[i] || 0) * crExpPct(e.o.vn, e.o.x, i, typ) / 100 : 0));
+  return Math.abs(e.c - exp) / e.rc * 100 > 0.5;
+}
+const crVigTxt = g => !g ? '—' : (g.faltam > 0 ? `faltam ${g.faltam} ${g.faltam === 1 ? 'mês' : 'meses'} (até ${crMonLbl(g.fimV)})` : `encerrada em ${crMonLbl(g.fimV)}`);
 function renderComReport() {
   const sel = document.getElementById('crVend'); if (!sel) return;
   const O = crVendOptions();
@@ -21470,14 +21503,14 @@ function renderComReport() {
       <span>Dados até: <b>${fd(DATA_DATE)}</b></span>
     </div>
     <div class="cr-rule"><b>Referência — Regras de Comissionamento (19/01/2026):</b> base = receita líquida faturada ·
-      Executivo de Vendas 7% por até 10 meses por cliente · AGI 10% (até 11 meses, a partir do 4º mês) · SDR 55% só no 1º mês ·
+      Executivo de Vendas 7% por até 10 meses por cliente · AGI 20% no 1º comissionamento e 10% depois (até 11 meses, a partir do 4º mês) · SDR 55% só no 1º mês ·
       cliente precisa comprar em até 60 dias do cadastro.</div>`;
   const dl = (c, p, lbl, o) => p == null ? '' : pill(c, p, lbl, o);
   document.getElementById('crKpis').innerHTML = [
     kpi({ cls: 'k-violet', lbl: 'Comissão no período', val: fFull(com), sub: per, deltas: dl(com, comP, W.lp) }),
     kpi({ cls: 'k-navy', lbl: 'Receita da carteira', val: fFull(rec), sub: `receita líquida das empresas ${ALL ? 'da equipe' : 'do vendedor'}`, deltas: dl(rec, recP, W.lp) }),
-    kpi({ cls: 'k-amber', lbl: '% comissão s/ receita', val: fPct(pc, 2), sub: 'comissão ÷ receita da carteira', deltas: dl(pc, pcP, W.lp, { pp: true }) }),
-    kpi({ cls: 'k-green', lbl: '% s/ receita comissionada', val: fPct(pcC, 2), sub: `só empresas/meses com comissão · receita ${fBRLtxt(recC)}` }),
+    kpi({ cls: 'k-amber', lbl: 'Receita comissionada', val: fFull(recC), sub: `receita que gerou comissão · ${fPct(rec ? recC / rec * 100 : null, 1)} da receita da carteira` }),
+    kpi({ cls: 'k-green', lbl: '% s/ receita comissionada', val: fPct(pcC, 2), sub: 'comissão ÷ receita comissionada' }),
     kpi({ cls: 'k-navy', lbl: 'Empresas na carteira', val: fInt(emp.length), sub: `${fInt(empC.length)} com comissão · ${fInt(empSem.length)} só receita, sem comissão` }),
     kpi({ cls: 'k-violet', lbl: 'Comissão média por empresa', val: fFull(empC.length ? com / empC.length : 0), sub: 'entre as empresas comissionadas' }),
     kpi({ cls: 'k-muted', lbl: 'GMV da carteira', val: fBRLtxt(gmv), sub: `comissão = ${fPct(gmv ? com / gmv * 100 : null, 2)} do GMV` }),
@@ -21485,12 +21518,14 @@ function renderComReport() {
   ].join('');
 
   // pontos de atenção para a validação do comercial
-  const offStd = e => { const t = TYP[e.o.vn]; return e.rc > 0 && t != null && Math.abs(e.c / e.rc * 100 - t) > 0.5; };
+  const offStd = e => crOffStd(e, TYP[e.o.vn], set);
   const conf = empC.filter(offStd);
   const semRec = empC.filter(e => e.rc <= 0);
   const fimNa = empC.filter(e => { const lc = Math.max(...set.filter(i => (e.o.x.com[i] || 0) > 0)); return set.some(i => i > lc && (e.o.x.rec[i] || 0) > 0); });
   const encerr = empSem.filter(e => e.o.x.com.some((c, i) => c > 0 && i < set[0]));
   const al = [];
+  const acimaRegra = empC.filter(e => { const g = crVigInfo(e.o.x, e.o.vn, TYP[e.o.vn], W.end); return g && g.pagos > g.vig; });
+  if (acimaRegra.length) al.push(`<div class="li"><span class="dot warn"></span><div><b>${fInt(acimaRegra.length)} empresa(s)</b> com comissão paga por mais meses que a vigência da regra (${ALL ? 'por cargo' : crVig(v, typ) + ' meses'}) — ver coluna "Meses p/ encerrar".</div></div>`);
   if (conf.length) al.push(`<div class="li"><span class="dot warn"></span><div><b>${fInt(conf.length)} empresa(s)</b> com % de comissão (sobre a receita dos meses comissionados) diferente do padrão ${ALL ? 'do respectivo vendedor' : 'de ' + fPct(typ, 1)} — marcadas como "Conferir %" na tabela.</div></div>`);
   if (semRec.length) al.push(`<div class="li"><span class="dot warn"></span><div><b>${fInt(semRec.length)} empresa(s)</b> com comissão no período mas sem receita lançada no mesmo mês (${fFull(sum(semRec.map(e => e.c)))}).</div></div>`);
   if (fimNa.length) al.push(`<div class="li"><span class="dot info"></span><div><b>${fInt(fimNa.length)} empresa(s)</b> pararam de gerar comissão dentro do período e seguem comprando (fim da vigência) — por isso o % sobre a receita total fica abaixo do padrão.</div></div>`);
@@ -21538,7 +21573,7 @@ function renderComReport() {
     return { k: 'sem', t: '<span class="pill">Sem comissão</span>' };
   };
   const erows = emp.map(e => { const s = sit(e), cm = e.o.x.com.map((c, i) => c > 0 ? i : -1).filter(i => i >= 0);
-    return { nome: e.o.x.nome, cnpj: e.o.x.cnpj, vn: e.o.vn, g: e.g, r: e.r, c: e.c, p: e.r ? e.c / e.r * 100 : null, pc: e.rc ? e.c / e.rc * 100 : null, nm: cm.length, ini: cm.length ? cm[0] : null, fim: cm.length ? cm[cm.length - 1] : null, s, _x: e.o.x, _rc: e.rc }; });
+    return { nome: e.o.x.nome, cnpj: e.o.x.cnpj, vn: e.o.vn, g: e.g, r: e.r, c: e.c, p: e.r ? e.c / e.r * 100 : null, pc: e.rc ? e.c / e.rc * 100 : null, nm: cm.length, ini: cm.length ? cm[0] : null, fim: cm.length ? cm[cm.length - 1] : null, s, _x: e.o.x, _rc: e.rc, vg: crVigInfo(e.o.x, e.o.vn, TYP[e.o.vn], W.end) }; });
   const cnt = k => k === 'todas' ? erows.length : erows.filter(x => x.s.k === k).length;
   document.getElementById('crEmpChips').innerHTML = [['todas', 'Todas'], ['ok', 'Comissionadas'], ['conf', 'Conferir'], ['sem', 'Sem comissão']].map(([k, t]) => `<button class="chip ${f === k ? 'on' : ''}" onclick="ST.crEmpF='${k}';renderComReport()">${t} (${fInt(cnt(k))})</button>`).join('');
   const shown = f === 'todas' ? erows : erows.filter(x => x.s.k === f);
@@ -21547,6 +21582,9 @@ function renderComReport() {
   cols.push({ k: 'g', t: 'GMV', cls: 'r', f: x => fFull(x.g) }, { k: 'r', t: 'Receita', cls: 'r', f: x => fFull(x.r) }, { k: 'c', t: 'Comissão', cls: 'r', f: x => `<b>${fFull(x.c)}</b>` },
     { k: 'p', t: '% s/ receita', cls: 'r', f: x => fPct(x.p, 2) }, { k: 'pc', t: '% s/ rec. comiss.', cls: 'r', f: x => fPct(x.pc, 2) }, { k: 'nm', t: 'Meses', cls: 'r', f: x => fInt(x.nm) },
     { k: 'ini', t: 'Comissionada de → até', v: x => x.ini == null ? -1 : x.ini, f: x => x.ini == null ? '<span class="muted">—</span>' : `${months[x.ini]} → ${months[x.fim]}` },
+    { k: 'falta', t: 'Meses p/ encerrar', v: x => x.vg ? x.vg.faltam : -1, f: x => !x.vg ? '<span class="muted">—</span>'
+      : (x.vg.faltam > 0 ? `<b>${x.vg.faltam}</b> <span class="muted">· até ${crMonLbl(x.vg.fimV)}</span>` : `<span class="muted">encerrada ${crMonLbl(x.vg.fimV)}</span>`)
+        + (x.vg.pagos > x.vg.vig ? ` <span class="pill warn" title="Regra: ${x.vg.vig} meses">${x.vg.pagos} meses pagos</span>` : '') },
     { k: 'sk', t: 'Situação', v: x => x.s.k, f: x => x.s.t });
   const tot = { nome: `Total (${fInt(shown.length)})`, g: fFull(sum(shown.map(x => x.g))), r: fFull(sum(shown.map(x => x.r))), c: fFull(sum(shown.map(x => x.c))) };
   const sr = sum(shown.map(x => x.r)), src = sum(shown.map(x => x._rc)); tot.p = fPct(sr ? sum(shown.map(x => x.c)) / sr * 100 : null, 2); tot.pc = fPct(src ? sum(shown.map(x => x.c)) / src * 100 : null, 2);
@@ -21566,15 +21604,15 @@ function crSummaryHTML() {
   const per = W.mode === 'mes' ? months[W.end] : `${months[ST.from]} a ${months[ST.to]}`;
   const fd = d => d ? d.split('-').reverse().join('/') : '—';
   const TYP = {}; [...new Set(rows.map(o => o.vn))].forEach(vn => { TYP[vn] = crTypical(rows.filter(o => o.vn === vn)); });
-  const off = e => { const t = TYP[e.o.vn]; return e.rc > 0 && t != null && Math.abs(e.c / e.rc * 100 - t) > 0.5; };
+  const off = e => crOffStd(e, TYP[e.o.vn], set);
   const comP = W.prev ? crSum(rows, 'com', W.prev) : null;
   const k = (cls, l, val, s) => `<div class="rs-k ${cls}"><div class="l">${l}</div><div class="v">${val}</div><div class="s">${s || '&nbsp;'}</div></div>`;
   const varTxt = comP ? `${(com - comP) / comP * 100 >= 0 ? '+' : ''}${fPct((com - comP) / comP * 100, 1)} ${W.mode === 'mes' ? 'vs mês anterior' : 'vs período anterior'}` : per;
   const kp = [
     k('', 'Comissão a pagar / paga', fFull(com), varTxt),
     k('n', 'Receita da carteira', fFull(rec), 'receita líquida faturada'),
-    k('a', '% comissão s/ receita', fPct(rec ? com / rec * 100 : null, 2), 'comissão ÷ receita da carteira'),
-    k('g', '% s/ receita comissionada', fPct(recC ? com / recC * 100 : null, 2), `receita comissionada ${fBRLtxt(recC)}`),
+    k('a', 'Receita comissionada', fFull(recC), `${fPct(rec ? recC / rec * 100 : null, 1)} da receita da carteira`),
+    k('g', '% s/ receita comissionada', fPct(recC ? com / recC * 100 : null, 2), 'comissão ÷ receita comissionada'),
     k('n', 'Empresas comissionadas', fInt(empC.length), `de ${fInt(emp.length)} na carteira · ${fInt(empSem.length)} sem comissão`),
     k('', 'Comissão média / empresa', fFull(empC.length ? com / empC.length : 0), 'entre as comissionadas'),
     k('n', 'GMV da carteira', fBRLtxt(gmv), `comissão = ${fPct(gmv ? com / gmv * 100 : null, 2)} do GMV`),
@@ -21585,6 +21623,8 @@ function crSummaryHTML() {
   const fim = empC.filter(e => { const lc = Math.max(...set.filter(i => (e.o.x.com[i] || 0) > 0)); return set.some(i => i > lc && (e.o.x.rec[i] || 0) > 0); });
   const encerr = empSem.filter(e => e.o.x.com.some((c, i) => c > 0 && i < set[0]));
   const notes = [];
+  const acimaRegra = empC.filter(e => { const g = crVigInfo(e.o.x, e.o.vn, TYP[e.o.vn], W.end); return g && g.pagos > g.vig; });
+  if (acimaRegra.length) notes.push(`<b>${fInt(acimaRegra.length)}</b> empresa(s) com comissão paga por mais meses que a vigência da regra (${ALL ? 'por cargo' : crVig(v, typ) + ' meses'}).`);
   if (conf.length) notes.push(`<b>${fInt(conf.length)}</b> empresa(s) com % diferente do padrão ${ALL ? 'do vendedor' : '(' + fPct(typ, 1) + ')'}: ${conf.slice(0, 5).map(e => esc(e.o.x.nome) + ' ' + fPct(e.c / e.rc * 100, 1)).join('; ')}${conf.length > 5 ? '…' : ''}.`);
   if (semRec.length) notes.push(`<b>${fInt(semRec.length)}</b> empresa(s) com comissão sem receita lançada no mês (${fFull(sum(semRec.map(e => e.c)))}).`);
   if (fim.length) notes.push(`<b>${fInt(fim.length)}</b> empresa(s) deixaram de gerar comissão no período e seguem comprando (fim da vigência).`);
@@ -21614,12 +21654,13 @@ function crSummaryHTML() {
   } else {
     const L = empC.slice().sort((a, b) => b.c - a.c), top = L.slice(0, CR_TOP), rest = L.slice(CR_TOP);
     detH = `Empresas que geraram comissão${L.length > CR_TOP ? ` — ${CR_TOP} maiores de ${fInt(L.length)}` : ''}`;
-    const st = e => off(e) ? 'Conferir %' : (e.rc <= 0 ? 'Sem receita no mês' : '');
-    detT = `<table><thead><tr><th>Empresa</th><th>CNPJ</th><th class="r">Receita comiss.</th><th class="r">Comissão</th><th class="r">%</th><th>Comissionada</th><th>Obs.</th></tr></thead><tbody>`
+    const st = (e, g) => [off(e) ? 'Conferir %' : (e.rc <= 0 ? 'Sem receita no mês' : ''), g && g.pagos > g.vig ? `${g.pagos} meses pagos (regra ${g.vig})` : ''].filter(Boolean).join(' · ');
+    detT = `<table><thead><tr><th>Empresa</th><th>CNPJ</th><th class="r">Receita comiss.</th><th class="r">Comissão</th><th class="r">%</th><th>Comissionada</th><th>Meses p/ encerrar</th><th>Obs.</th></tr></thead><tbody>`
       + top.map(e => { const cm = e.o.x.com.map((c, i) => c > 0 ? i : -1).filter(i => i >= 0);
-          return `<tr><td class="nm">${esc(e.o.x.nome)}</td><td>${fCNPJ(e.o.x.cnpj)}</td><td class="r">${fFull(e.rc)}</td><td class="r"><b>${fFull(e.c)}</b></td><td class="r">${pct(e.c, e.rc)}</td><td>${cm.length ? months[cm[0]] + ' → ' + months[cm[cm.length - 1]] : '—'}</td><td>${st(e)}</td></tr>`; }).join('')
-      + (rest.length ? `<tr><td class="nm" colspan="2">Demais ${fInt(rest.length)} empresas</td><td class="r">${fFull(sum(rest.map(e => e.rc)))}</td><td class="r">${fFull(sum(rest.map(e => e.c)))}</td><td class="r">${pct(sum(rest.map(e => e.c)), sum(rest.map(e => e.rc)))}</td><td></td><td></td></tr>` : '')
-      + `<tr class="tot"><td colspan="2">Total (${fInt(L.length)} empresas)</td><td class="r">${fFull(recC)}</td><td class="r">${fFull(com)}</td><td class="r">${pct(com, recC)}</td><td></td><td></td></tr></tbody></table>`;
+          const g = crVigInfo(e.o.x, e.o.vn, TYP[e.o.vn], W.end);
+          return `<tr><td class="nm">${esc(e.o.x.nome)}</td><td>${fCNPJ(e.o.x.cnpj)}</td><td class="r">${fFull(e.rc)}</td><td class="r"><b>${fFull(e.c)}</b></td><td class="r">${pct(e.c, e.rc)}</td><td>${cm.length ? months[cm[0]] + ' → ' + months[cm[cm.length - 1]] : '—'}</td><td>${crVigTxt(g)}</td><td>${st(e, g)}</td></tr>`; }).join('')
+      + (rest.length ? `<tr><td class="nm" colspan="2">Demais ${fInt(rest.length)} empresas</td><td class="r">${fFull(sum(rest.map(e => e.rc)))}</td><td class="r">${fFull(sum(rest.map(e => e.c)))}</td><td class="r">${pct(sum(rest.map(e => e.c)), sum(rest.map(e => e.rc)))}</td><td></td><td></td><td></td></tr>` : '')
+      + `<tr class="tot"><td colspan="2">Total (${fInt(L.length)} empresas)</td><td class="r">${fFull(recC)}</td><td class="r">${fFull(com)}</td><td class="r">${pct(com, recC)}</td><td></td><td></td><td></td></tr></tbody></table>`;
   }
   const now = new Date(), ger = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const logo = (document.querySelector('.side-logo') || { innerHTML: '' }).innerHTML.replace(/<div class="tag">[^<]*<\/div>/, '');
@@ -21635,7 +21676,7 @@ function crSummaryHTML() {
     <div class="rs-note"><ul>${notes.map(n => '<li>' + n + '</li>').join('')}</ul></div>
     <h2>${mesH}</h2>${mesT}
     <h2>${detH}</h2>${detT}
-    <div class="rs-foot">Base: receita líquida faturada (planilha Controle Lorena). % s/ receita comissionada considera só empresas/meses com comissão. Referência — Regras de Comissionamento (19/01/2026): Executivo de Vendas 7% por até 10 meses · AGI 10% (até 11 meses, a partir do 4º) · SDR 55% só no 1º mês · 1º pedido em até 60 dias do cadastro. Detalhe completo empresa × mês no botão Excel do painel.</div>
+    <div class="rs-foot">Base: receita líquida faturada (planilha Controle Lorena). % s/ receita comissionada considera só empresas/meses com comissão. Referência — Regras de Comissionamento (19/01/2026): Executivo de Vendas 7% por até 10 meses · AGI 20% no 1º comissionamento e 10% depois (até 11 meses, a partir do 4º) · SDR 55% só no 1º mês · 1º pedido em até 60 dias do cadastro. "Meses p/ encerrar" usa essa vigência, contada do 1º mês com comissão até o mês analisado. Detalhe completo empresa × mês no botão Excel do painel.</div>
     <div class="rs-sign"><div>Validação — Comercial<br><br>Nome / data</div><div>Aprovação — Diretoria<br><br>Nome / data</div></div>`;
 }
 function crPrint() {
