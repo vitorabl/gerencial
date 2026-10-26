@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- TPL_V3_20261020 -->
+<!-- TPL_V3_20261026 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel de Gestão — Motiva Benefícios</title>
@@ -20484,6 +20484,7 @@ _CC.forEach(r => {
   const c = (CCC[k] = CCC[k] || { nome: r[1], m: {} }); const cm = (c.m[mi] = c.m[mi] || { compra: 0, proj: 0, carga: 0, econ: 0, cart: 0 });
   cm.compra += r[3]; cm.proj += r[4]; cm.carga += r[5]; cm.econ += r[6]; cm.cart += r[7];
   const op = r[9] || 'Não informada'; CCOP[mi][op] = (CCOP[mi][op] || 0) + r[3];
+  cm.op = cm.op || {}; cm.op[op] = (cm.op[op] || 0) + r[3];
 });
 
 // ---------------------------------------------------------------- análises de carteira
@@ -20804,8 +20805,15 @@ function xlsx(name, headers, rows) {
   XLSX.writeFile(wb, `${name}_${DATA_DATE || 'dados'}.xlsx`);
 }
 const segBadge = s => `<span class="badge seg-${s}">${SEGS[s] || '—'}</span>`;
+function cliOpTip(cnpj, idx) {
+  const cc = CCC[cnpj]; if (!cc) return '';
+  const acc = {}; idx.forEach(i => { const o = (cc.m[i] || {}).op; if (o) Object.keys(o).forEach(k => { acc[k] = (acc[k] || 0) + o[k]; }); });
+  const arr = Object.entries(acc).filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]); if (!arr.length) return '';
+  const tot = arr.reduce((t, e) => t + e[1], 0);
+  return 'GMV por praça (operadora):\n' + arr.map(e => `${e[0]}: ${fBRL(e[1])} (${fPct(tot ? e[1] / tot * 100 : 0, 1)})`).join('\n');
+}
 function kpi(o) {
-  return `<div class="kpi ${o.cls || ''}"><div class="lbl">${o.lbl}</div><div class="val">${o.val}</div>` +
+  return `<div class="kpi ${o.cls || ''}"${o.tip ? ` title="${esc(o.tip)}" style="cursor:help"` : ''}><div class="lbl">${o.lbl}</div><div class="val">${o.val}</div>` +
     (o.sub ? `<div class="meta-line">${o.sub}</div>` : '') +
     (o.prog != null ? `<div class="progress ${o.prog >= 100 ? 'ok' : (o.prog >= 90 ? 'mid' : 'low')}"><i style="width:${Math.min(100, Math.max(0, o.prog))}%"></i></div>` : '') +
     (o.deltas ? `<div class="deltas">${o.deltas}</div>` : '') + '</div>';
@@ -21608,8 +21616,8 @@ function drawClient() {
     ${al ? `<div><span class="badge prio-${al.prio}" style="font-size:12px;padding:5px 12px">${SIG_LBL[al.sig]} · ${al.risk ? fBRL(al.risk) + ' em risco' : 'prioridade ' + al.prio.toLowerCase()}</span></div>` : '<div><span class="pill up" style="font-size:12px;padding:5px 12px">Sem alerta em ' + months[r] + '</span></div>'}
     <button class="btn" onclick="ST.cli=null;syncPicker();drawClient()">Fechar</button></div>
     <div class="kpis" style="margin-top:16px">
-      ${kpi({ cls: 'k-violet', lbl: `GMV ${months[ST.from]}–${months[ST.to]}`, val: fBRL(g), sub: `${act} de ${idx.length} meses com compra · média ${fBRL(act ? g / act : 0)}` })}
-      ${kpi({ cls: 'k-violet', lbl: `GMV em ${months[r]}`, val: fBRL(c.gmv[r]), deltas: pill(c.gmv[r], p >= 0 ? c.gmv[p] : null, 'm/m') + pill(c.gmv[r], r >= 12 ? c.gmv[r - 12] : null, 'a/a') })}
+      ${kpi({ cls: 'k-violet', lbl: `GMV ${months[ST.from]}–${months[ST.to]}`, tip: cliOpTip(c.cnpj, idx), val: fBRL(g), sub: `${act} de ${idx.length} meses com compra · média ${fBRL(act ? g / act : 0)}` })}
+      ${kpi({ cls: 'k-violet', lbl: `GMV em ${months[r]}`, tip: cliOpTip(c.cnpj, [r]), val: fBRL(c.gmv[r]), deltas: pill(c.gmv[r], p >= 0 ? c.gmv[p] : null, 'm/m') + pill(c.gmv[r], r >= 12 ? c.gmv[r - 12] : null, 'a/a') })}
       ${kpi({ cls: 'k-amber', lbl: 'Receita (NF) no período', val: fBRL(n), sub: `take rate ${fPct(g ? n / g * 100 : null, 2)}` })}
       ${kpi({ cls: 'k-green', lbl: 'Economia gerada no período', val: fBRL(ec), sub: `bruta ${fBRL(pj)} · ${fPct(g ? pj / g * 100 : 0, 1)} da demanda` })}
     </div>
