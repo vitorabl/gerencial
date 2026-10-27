@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- TPL_V3_202610271 -->
+<!-- TPL_V3_202610272 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel de Gestão — Motiva Benefícios</title>
@@ -877,7 +877,7 @@ body.printing #comReportWrap .card{break-inside:auto}
     <div class="grid g2">
       <div class="card"><h3>Indicadores financeiros</h3><dl class="gloss">
         <dt>GMV (VT)</dt><dd>Valor total pedido pelos clientes no Pedido de Carga Completo (exceto tipo "Deposit") somado aos Pedidos Externos com BaseSK = "Sem SK". Pedido Externo com BaseSK numerado é a mesma recarga já lançada no Pedido de Carga e não é somado de novo.</dd>
-        <dt>GMV (PAT)</dt><dd>Volume de alimentação/refeição. Suspenso desde Mai/26 enquanto a Motiva negocia com um novo parceiro; as metas de PAT continuam exibidas para dimensionar o impacto. Mai/26 e Jun/26: valores informados manualmente, baseados na receita informada.</dd>
+        <dt>GMV (PAT)</dt><dd>Volume de alimentação/refeição. Suspenso desde Jul/26 enquanto a Motiva negocia com um novo parceiro; as metas de PAT continuam exibidas para dimensionar o impacto. Mai/26 e Jun/26: valores informados manualmente, baseados na receita informada.</dd>
         <dt>Receita VT</dt><dd>Taxa administrativa + taxa de entrega (2ª via) + taxa de sucesso, de todos os pedidos (com ou sem SK), <b>+ financiamento</b>, que é uma classe da receita de VT. A meta de receita VT é comparada só com as taxas, porque a meta da planilha não inclui o financiamento (ajustável no bloco de metas: META_REC_VT_INCLUI_FINANCIAMENTO).</dd>
         <dt>Financiamento</dt><dd>Receita financeira do mês, classe dentro da receita de VT. Não tem meta própria. O take rate VT continua calculado só com as taxas (receita de taxas ÷ GMV).</dd>
         <dt>Take rate</dt><dd>Receita do produto ÷ GMV do produto. Como o PAT tem take rate bem menor que o VT, a saída do PAT eleva o take rate total sem que o VT tenha mudado — por isso o painel mostra o take rate por produto.</dd>
@@ -20396,7 +20396,7 @@ var METAS = {
 // Situação do PAT: suspenso a partir deste mês (negociação com novo parceiro). Remova ou ajuste quando retomar.
 var PAT_MANUAL_MESES = ['Mai/26', 'Jun/26'];
 var PAT_MANUAL_NOTA = 'Mai/26 e Jun/26: GMV e receita do PAT informados manualmente, com base na receita informada (não vêm do Acompanhamento).';
-var PAT_STATUS = { suspensoDesde: 'Mai/26', motivo: 'negociação com novo parceiro' };
+var PAT_STATUS = { suspensoDesde: 'Jul/26', motivo: 'negociação com novo parceiro' };
 // Financiamento é uma classe da receita de VT: Receita VT = Tx Adm + Tx Entrega (2ª via) + Tx Sucesso + Financiamento.
 // A planilha compara a meta de receita VT com taxas + financiamento (ex.: Fev/26 realizado 176.847 = taxas 168.163 + financiamento 8.685).
 var META_REC_VT_INCLUI_FINANCIAMENTO = true;
