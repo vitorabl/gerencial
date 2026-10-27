@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- TPL_V3_202610262 -->
+<!-- TPL_V3_202610271 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel de Gestão — Motiva Benefícios</title>
@@ -877,7 +877,7 @@ body.printing #comReportWrap .card{break-inside:auto}
     <div class="grid g2">
       <div class="card"><h3>Indicadores financeiros</h3><dl class="gloss">
         <dt>GMV (VT)</dt><dd>Valor total pedido pelos clientes no Pedido de Carga Completo (exceto tipo "Deposit") somado aos Pedidos Externos com BaseSK = "Sem SK". Pedido Externo com BaseSK numerado é a mesma recarga já lançada no Pedido de Carga e não é somado de novo.</dd>
-        <dt>GMV (PAT)</dt><dd>Volume de alimentação/refeição. Suspenso desde Mai/26 enquanto a Motiva negocia com um novo parceiro; as metas de PAT continuam exibidas para dimensionar o impacto.</dd>
+        <dt>GMV (PAT)</dt><dd>Volume de alimentação/refeição. Suspenso desde Mai/26 enquanto a Motiva negocia com um novo parceiro; as metas de PAT continuam exibidas para dimensionar o impacto. Mai/26 e Jun/26: valores informados manualmente, baseados na receita informada.</dd>
         <dt>Receita VT</dt><dd>Taxa administrativa + taxa de entrega (2ª via) + taxa de sucesso, de todos os pedidos (com ou sem SK), <b>+ financiamento</b>, que é uma classe da receita de VT. A meta de receita VT é comparada só com as taxas, porque a meta da planilha não inclui o financiamento (ajustável no bloco de metas: META_REC_VT_INCLUI_FINANCIAMENTO).</dd>
         <dt>Financiamento</dt><dd>Receita financeira do mês, classe dentro da receita de VT. Não tem meta própria. O take rate VT continua calculado só com as taxas (receita de taxas ÷ GMV).</dd>
         <dt>Take rate</dt><dd>Receita do produto ÷ GMV do produto. Como o PAT tem take rate bem menor que o VT, a saída do PAT eleva o take rate total sem que o VT tenha mudado — por isso o painel mostra o take rate por produto.</dd>
@@ -905,10 +905,10 @@ body.printing #comReportWrap .card{break-inside:auto}
 // ===================== DADOS (gerados pela rotina diária — mesmos nomes do painel anterior) =====================
 const months = ['Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','Ago/25','Set/25','Out/25','Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26','Mai/26','Jun/26','Jul/26','Ago/26','Set/26','Out/26','Nov/26','Dez/26'];
 const gmvVT    = [3750309,3849420,3791696,3759588,3900582,3974325,4118794,4077965,4102352,3625259,3766626,3610548,3799822,3737189,3533037,4352421,4570791,5021844,4756266,5367273,4801249,2031784,0,0];
-const gmvPAT   = [5955843,7076846,7102068,7214673,7460443,8304357,6607448,7429489,7244888,7297424,7678535,7587766,8066394,9028648,7550483,11946729,0,0,0,0,0,0,0,0];
-const gmvTotal = [9706152,10926267,10893764,10974261,11361025,12278682,10726242,11507454,11347241,10922683,11445161,11198315,11866217,12765837,11083520,16299150,4570791,5021844,4756266,5367273,4801249,2031784,0,0];
+const gmvPAT   = [5955843,7076846,7102068,7214673,7460443,8304357,6607448,7429489,7244888,7297424,7678535,7587766,8066394,9028648,7550483,11946729,4826798,2688768,0,0,0,0,0,0];
+const gmvTotal = [9706152,10926267,10893764,10974261,11361025,12278682,10726242,11507454,11347241,10922683,11445161,11198315,11866217,12765837,11083520,16299150,9397589,7710612,4756266,5367273,4801249,2031784,0,0];
 const recVT    = [137579,127310,125771,136723,157639,164853,176993,163724,166104,157607,159160,168521,175801,168163,140158,184865,207146,216245,223748,211988,215597,72695,0,0];
-const recPAT   = [34182,41888,41974,43603,43982,49253,38090,43751,42681,42961,44564,45345,47353,54147,44011,71056,28961,0,0,0,0,0,0,0];
+const recPAT   = [34182,41888,41974,43603,43982,49253,38090,43751,42681,42961,44564,45345,47353,54147,44011,71056,28961,16133,0,0,0,0,0,0];
 const financiamento = [9626,9421,8752,9784,11124,11748,19660,10094,9510,9591,8312,9610,8622,8685,8450,12319,22118,41668,47358,17149,28658,0,0,0];
 const cartoesMes=[17564,17611,16761,17377,18327,17593,19335,17131,17554,16863,17223,16508,16689,14686,14012,16662,18242,18027,20009,22191,18006,8842,0,0];
 const nfPedCarga  = [129778,114519,113920,121690,151017,158349,172233,158950,158929,153820,154232,163697,171281,162099,133960,177956,195508,204700,211021,202533,203335,72695,0,0];
@@ -20394,6 +20394,8 @@ var METAS = {
   }
 };
 // Situação do PAT: suspenso a partir deste mês (negociação com novo parceiro). Remova ou ajuste quando retomar.
+var PAT_MANUAL_MESES = ['Mai/26', 'Jun/26'];
+var PAT_MANUAL_NOTA = 'Mai/26 e Jun/26: GMV e receita do PAT informados manualmente, com base na receita informada (não vêm do Acompanhamento).';
 var PAT_STATUS = { suspensoDesde: 'Mai/26', motivo: 'negociação com novo parceiro' };
 // Financiamento é uma classe da receita de VT: Receita VT = Tx Adm + Tx Entrega (2ª via) + Tx Sucesso + Financiamento.
 // A planilha compara a meta de receita VT com taxas + financiamento (ex.: Fev/26 realizado 176.847 = taxas 168.163 + financiamento 8.685).
@@ -21000,7 +21002,7 @@ function renderExec() {
     if (!ks.length) return `Sem metas de PAT cadastradas para ${months[ST.from]}–${months[ST.to]}`;
     const re = sum(ks.map(i => arr[i])), me = sum(ks.map(i => metaOf('PAT', kind, i)));
     const susp = ks.filter(i => patSuspended(i)), lost = sum(susp.map(i => metaOf('PAT', kind, i)));
-    return `Meses com meta no período: ${fBRL(re)} de ${fBRL(me)} (${fPct(me ? re / me * 100 : 0, 1)})` + (susp.length ? ` · suspenso desde ${PAT_STATUS.suspensoDesde}: ${fBRL(lost)} de meta sem realização` : '');
+    return `Meses com meta no período: ${fBRL(re)} de ${fBRL(me)} (${fPct(me ? re / me * 100 : 0, 1)})` + (susp.length ? ` · suspenso desde ${PAT_STATUS.suspensoDesde}: ${fBRL(lost)} de meta sem realização` : '') + (PAT_MANUAL_MESES.some(m => pIdx.includes(idxOf(m))) ? `<br><i>* ${PAT_MANUAL_NOTA}</i>` : '');
   };
   document.getElementById('execMetaPatGSub').innerHTML = subPat(gmvPAT, 'gmv');
   document.getElementById('execMetaPatRSub').innerHTML = subPat(recPAT, 'rec');
