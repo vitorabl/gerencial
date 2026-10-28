@@ -166,6 +166,12 @@
   .info-note { background:var(--orange-soft); border:1px solid #FDD0B0; border-left:4px solid var(--orange); border-radius:8px; padding:9px 13px; font-size:11.5px; color:var(--muted); margin-bottom:14px; }
   .info-note strong { color:var(--navy); }
   .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:700; }
+  .crm-in { border:1px solid var(--border); border-radius:6px; padding:4px 6px; font:inherit; font-size:12px; background:#fff; color:inherit; }
+  .crm-in:focus { outline:2px solid rgba(2,44,104,.25); }
+  .crm-obs { width:280px; } .crm-n { width:58px; } .crm-sel { min-width:130px; }
+  .crm-upd { font-size:10.5px; color:var(--muted); white-space:nowrap; }
+  .crm-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:12px; margin:0 0 10px; }
+  .crm-bar .crm-state { font-weight:600; }
   .pill.ativo { background:#DCFCE7; color:#15803D; }
   .pill.risco { background:var(--orange-soft); color:#C2410C; }
   .pill.inativo { background:#FEE2E2; color:#B91C1C; }
@@ -355,6 +361,7 @@ function togglePwd(){
   <div class="section-title"><h2>Carteira</h2><span class="hint">status calculado pela data de hoje</span></div>
   <div class="kpis k4" id="nlaCliKpis"></div>
   <div class="section-title"><h2>Clientes</h2></div>
+  
   <div class="card">
     <div class="toolbar">
       <input type="text" class="input" id="nlaCliSearch" placeholder="🔍 Código ou nome..." oninput="cliTable()">
@@ -434,6 +441,7 @@ function togglePwd(){
   <div class="section-title"><h2>Carteira</h2><span class="hint">status calculado pela data de hoje</span></div>
   <div class="kpis k6" id="aliCliKpis"></div>
   <div class="section-title"><h2>Clientes</h2></div>
+  <div class="crm-bar no-print"><b>Contatos comerciais:</b> <label>Seu nome: <input type="text" class="crm-in" id="aliCrmUser" maxlength="40" placeholder="quem está registrando" oninput="crmSetUser(this.value)"></label><label>Filtrar status do contato: <select class="crm-in" id="aliCrmFilter" onchange="cliSet('crm',this.value)"><option value="todos">Todos</option><option value="__sem__">Sem registro</option><option>Não contatado</option><option>Sem resposta</option><option>Retornar depois</option><option>Em negociação</option><option>Reativado/Comprou</option><option>Sem interesse</option><option>Número/contato inválido</option></select></label><label>Contato no período do painel: <select class="crm-in" id="aliCrmPer" onchange="cliSet('crmper',this.value)"><option value="todos">Todos</option><option value="com">Com contato no período</option><option value="sem">Sem contato no período</option></select></label><span class="crm-state" id="aliCrmState"></span><button class="btn" onclick="crmSync()">↻ Sincronizar</button></div>
   <div class="card">
     <div class="toolbar">
       <input type="text" class="input" id="aliCliSearch" placeholder="🔍 Código, nome ou CNPJ..." oninput="cliTable()">
@@ -806,8 +814,82 @@ function renderGmv(){
   el(k+'DetBody').innerHTML = body + foot;
 }
 
+// ===================== CONTATOS COMERCIAIS (ALI · aba Clientes) =====================
+// Status/data/período/tentativas/observação por cliente. Salva no navegador (localStorage) e, quando
+// ALI_CRM_CFG.url está configurada (Google Apps Script → planilha Google), sincroniza entre todos os usuários.
+const ALI_CRM_CFG = {"url": "https://script.google.com/macros/s/AKfycbwlLzZIRYmpmUZuSB9ZEQMmnqM97WXIE-tzKSpi7XCD8PsNGvw3uYMk4hcdWNrSnc2d/exec", "token": "VTDireto2026"};
+const CRM_STATUS = ['Não contatado','Sem resposta','Retornar depois','Em negociação','Reativado/Comprou','Sem interesse','Número/contato inválido'];
+const CRM_LS = 'vtdireto_ali_crm_v1', CRM_USER_LS = 'vtdireto_ali_crm_user';
+let CRM = {}, crmState = {mode: ALI_CRM_CFG.url ? 'idle' : 'local', last:null, busy:false};
+function crmLoadLocal(){ try{ CRM = JSON.parse(localStorage.getItem(CRM_LS) || '{}') || {}; }catch(e){ CRM = {}; } }
+function crmSaveLocal(){ try{ localStorage.setItem(CRM_LS, JSON.stringify(CRM)); }catch(e){} }
+function crmUser(){ try{ return localStorage.getItem(CRM_USER_LS) || ''; }catch(e){ return ''; } }
+function crmSetUser(v){ try{ localStorage.setItem(CRM_USER_LS, v.trim()); }catch(e){} }
+function crmPending(){ return Object.values(CRM).filter(r => r.dirty).length; }
+function crmStateRender(){
+  const e = el('aliCrmState'); if(!e) return;
+  const pend = crmPending(), hh = crmState.last ? crmState.last.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : '';
+  if(crmState.mode === 'local') e.innerHTML = '<span style="color:#C2410C">🟠 Modo local: salvo só neste navegador (não compartilhado)</span>';
+  else if(crmState.mode === 'error') e.innerHTML = `<span style="color:#B91C1C">🔴 Falha ao sincronizar${pend ? ` (${pend} pendente${pend>1?'s':''})` : ''}: salvo neste navegador</span>`;
+  else if(crmState.busy) e.innerHTML = '<span style="color:#475569">⏳ Sincronizando…</span>';
+  else e.innerHTML = `<span style="color:#15803D">🟢 Compartilhado (Google Sheets)${hh ? ' · sincronizado às ' + hh : ''}${pend ? ` · ${pend} pendente(s)` : ''}</span>`;
+}
+async function crmPost(rec){
+  const body = {token:ALI_CRM_CFG.token || '', action:'save', rec:{cod:rec.cod, nome:rec.nome||'', status:rec.status||'', data:rec.data||'', tentativas:rec.tentativas||0, obs:rec.obs||'', resp:rec.resp||'', upd:rec.upd}};
+  const r = await fetch(ALI_CRM_CFG.url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body)});
+  const j = await r.json(); if(!j.ok) throw new Error(j.error || 'erro');
+}
+async function crmSync(){
+  if(!ALI_CRM_CFG.url || crmState.busy) return;
+  crmState.busy = true; crmStateRender();
+  try{
+    for(const r of Object.values(CRM).filter(x => x.dirty)){ await crmPost(r); r.dirty = false; }
+    const resp = await fetch(ALI_CRM_CFG.url + '?action=list&token=' + encodeURIComponent(ALI_CRM_CFG.token || ''));
+    const j = await resp.json(); if(!j.ok) throw new Error(j.error || 'erro');
+    (j.rows || []).forEach(rm => { const l = CRM[rm.cod]; if(!l || (!l.dirty && String(rm.upd||'') >= String(l.upd||''))) CRM[rm.cod] = Object.assign({}, rm, {dirty:false}); });
+    crmSaveLocal(); crmState.mode = 'ok'; crmState.last = new Date();
+  }catch(e){ crmState.mode = 'error'; }
+  crmState.busy = false; crmStateRender();
+  if(ST.proj === 'ali' && ST.page === 'clientes') cliTable();
+}
+function crmInit(){
+  if(crmInit.done){ crmStateRender(); return; }
+  crmInit.done = true; crmLoadLocal();
+  const u = el('aliCrmUser'); if(u) u.value = crmUser();
+  crmStateRender(); crmSync();
+}
+function crmInWin(r){
+  if(!r || !r.data) return false;
+  const m = /^(\d{4})-(\d{2})/.exec(r.data); if(!m) return false;
+  const lbl = MESES[parseInt(m[2], 10) - 1] + '/' + m[1].slice(2);
+  return WIN().cur.includes(P().months.indexOf(lbl));
+}
+function crmSelect(opts, val, cod, f){
+  return `<select class="crm-in crm-sel" data-cod="${escHtml(cod)}" data-f="${f}"><option value=""></option>` + opts.map(o => `<option${o===val?' selected':''}>${escHtml(o)}</option>`).join('') + '</select>';
+}
+function crmCells(c){
+  const r = CRM[c.cod] || {}, cod = escHtml(c.cod);
+  const upd = r.upd ? `${escHtml(r.resp || '—')} · ${new Date(r.upd).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}` : '';
+  return `<td>${crmSelect(CRM_STATUS, r.status, c.cod, 'status')}</td>
+    <td><input type="date" class="crm-in" data-cod="${cod}" data-f="data" value="${escHtml(r.data||'')}"></td>
+    <td><input type="number" min="0" max="99" class="crm-in crm-n" data-cod="${cod}" data-f="tentativas" value="${r.tentativas||0}"></td>
+    <td><input type="text" maxlength="500" class="crm-in crm-obs" data-cod="${cod}" data-f="obs" placeholder="Observação…" value="${escHtml(r.obs||'')}"></td>
+    <td class="crm-upd" id="crmUpd_${cod}">${upd}</td>`;
+}
+document.addEventListener('change', ev => {
+  const t = ev.target; if(!t || !t.classList || !t.classList.contains('crm-in')) return;
+  const cod = t.dataset.cod, f = t.dataset.f, cli = (ALI ? ALI.clientes : []).find(x => String(x.cod) === String(cod));
+  const rec = CRM[cod] || (CRM[cod] = {cod:cod});
+  rec[f] = f === 'tentativas' ? Math.max(0, Math.min(99, parseInt(t.value, 10) || 0)) : t.value;
+  rec.nome = cli ? cli.nome : (rec.nome || ''); rec.resp = crmUser() || 'Não informado'; rec.upd = new Date().toISOString(); rec.dirty = true;
+  crmSaveLocal();
+  const u = document.getElementById('crmUpd_' + cod);
+  if(u) u.textContent = rec.resp + ' · ' + new Date(rec.upd).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+  crmStateRender(); crmSync();
+});
+
 // ===================== CLIENTES =====================
-const CLI = { nla:{ st:'todos', mod:'todos' }, ali:{ st:'todos', mod:'todos' } };
+const CLI = { nla:{ st:'todos', mod:'todos' }, ali:{ st:'todos', mod:'todos', crm:'todos', crmper:'todos' } };
 function cliSet(kind, v){ CLI[ST.proj][kind] = v; renderClientes(); }
 function cliRows(){
   const p = P(), w = WIN();
@@ -820,6 +902,7 @@ function cliRows(){
 }
 function renderClientes(){
   const p = P(), k = p.key, f = CLI[k];
+  if(k === 'ali') crmInit();
   const st = p.clientes.map(c => statusCliente(diasSemComprar(c.last)).cls);
   const n = s => st.filter(x => x === s).length;
   let cards = `
@@ -843,6 +926,8 @@ function cliFiltered(){
   return cliRows().filter(c => {
     if(q && !(String(c.cod).toLowerCase().includes(q) || String(c.nome||'').toLowerCase().includes(q) || (qd && String(c.doc||'').includes(qd)))) return false;
     if(f.mod !== 'todos' && c.modulo !== f.mod) return false;
+    if(k === 'ali' && f.crmper && f.crmper !== 'todos'){ const has = crmInWin(CRM[c.cod]); if(f.crmper === 'com' ? !has : has) return false; }
+    if(k === 'ali' && f.crm && f.crm !== 'todos'){ const cs = (CRM[c.cod] || {}).status || ''; if(f.crm === '__sem__' ? cs !== '' : cs !== f.crm) return false; }
     return f.st === 'todos' || c.st.cls === f.st;
   });
 }
@@ -851,14 +936,14 @@ function cliTable(){
   const rows = cliFiltered();
   el(k+'CliCount').textContent = `${fmtN(rows.length)} cliente${rows.length===1?'':'s'} · valores de ${w.name}`;
   if(k === 'ali'){
-    el(k+'CliHead').innerHTML = `<tr><th>Código</th><th>Nome</th><th>CPF/CNPJ</th><th>Última estocagem</th><th class="r">Dias sem comprar</th><th>Status</th><th>Módulo</th><th class="r">GMV</th><th class="r">Taxa</th><th class="r">Cartões</th></tr>`;
+    el(k+'CliHead').innerHTML = `<tr><th>Código</th><th>Nome</th><th>CPF/CNPJ</th><th>Última estocagem</th><th class="r">Dias sem comprar</th><th>Status</th><th>Módulo</th><th class="r">GMV</th><th class="r">Taxa</th><th class="r">Cartões</th><th>Status do contato</th><th>Data do contato</th><th>Tentativas</th><th>Observação</th><th>Atualizado</th></tr>`;
     el(k+'CliBody').innerHTML = rows.map(c => `<tr>
       <td>${escHtml(c.cod)}</td><td class="name" title="${escHtml(c.nome)}">${escHtml(c.nome)}${c.tipo==='Dependente'?' <span class="muted" style="font-size:10px;">(dependente)</span>':''}</td>
       <td>${escHtml(c.doc)}</td><td>${fDate(c.last)}</td><td class="r">${c.dias===null?'—':c.dias}</td>
       <td><span class="pill ${c.st.cls}">${c.st.label}</span></td>
       <td><span class="pill ${c.modulo==='Completo'?'completo':'basico'}">${c.modulo}</span></td>
-      <td class="r">${fmtR(c.gmvP)}</td><td class="r">${fmtR(c.taxaP)}</td><td class="r">${fmtN(c.cartP)}</td></tr>`).join('')
-      + `<tr class="total"><td colspan="7">Total (${fmtN(rows.length)})</td><td class="r">${fmtR(sum(rows.map(r=>r.gmvP)))}</td><td class="r">${fmtR(sum(rows.map(r=>r.taxaP)))}</td><td class="r">${fmtN(sum(rows.map(r=>r.cartP)))}</td></tr>`;
+      <td class="r">${fmtR(c.gmvP)}</td><td class="r">${fmtR(c.taxaP)}</td><td class="r">${fmtN(c.cartP)}</td>${crmCells(c)}</tr>`).join('')
+      + `<tr class="total"><td colspan="7">Total (${fmtN(rows.length)})</td><td class="r">${fmtR(sum(rows.map(r=>r.gmvP)))}</td><td class="r">${fmtR(sum(rows.map(r=>r.taxaP)))}</td><td class="r">${fmtN(sum(rows.map(r=>r.cartP)))}</td><td colspan="5"></td></tr>`;
   } else {
     el(k+'CliHead').innerHTML = `<tr><th>Código</th><th>Nome</th><th>Última compra</th><th class="r">Dias sem comprar</th><th>Status</th><th class="r">GMV</th><th class="r">Casco</th><th class="r">Taxa</th></tr>`;
     el(k+'CliBody').innerHTML = rows.map(c => `<tr>
@@ -874,8 +959,8 @@ function cliExport(){
   const lbl = w.name.replace(/\*/g, '');
   const lines = [];
   if(p.key === 'ali'){
-    lines.push(['Codigo','Nome','Tipo','CPF/CNPJ','Ultima Estocagem','Dias sem comprar','Status','Modulo',`GMV (${lbl})`,`Taxa (${lbl})`,`Cartoes (${lbl})`].join(';'));
-    cliRows().forEach(c => lines.push([c.cod, q(c.nome), c.tipo, q(c.doc), c.last, c.dias===null?'':c.dias, c.st.label, c.modulo, num(c.gmvP), num(c.taxaP), c.cartP].join(';')));
+    lines.push(['Codigo','Nome','Tipo','CPF/CNPJ','Ultima Estocagem','Dias sem comprar','Status','Modulo',`GMV (${lbl})`,`Taxa (${lbl})`,`Cartoes (${lbl})`,'Status do contato','Data do contato','Tentativas','Observacao','Responsavel','Atualizado em'].join(';'));
+    cliRows().forEach(c => lines.push([c.cod, q(c.nome), c.tipo, q(c.doc), c.last, c.dias===null?'':c.dias, c.st.label, c.modulo, num(c.gmvP), num(c.taxaP), c.cartP, ...(r => [r.status||'', r.data||'', r.tentativas||0, q(r.obs||''), q(r.resp||''), r.upd||''])(CRM[c.cod]||{})].join(';')));
   } else {
     lines.push(['Codigo','Nome','Ultima Compra','Dias sem comprar','Status',`GMV (${lbl})`,`Casco (${lbl})`,`Taxa (${lbl})`].join(';'));
     cliRows().forEach(c => lines.push([c.cod, q(c.nome), c.last||'', c.dias===null?'':c.dias, c.st.label, num(c.gmvP), num(c.cascoP), num(c.taxaP)].join(';')));
