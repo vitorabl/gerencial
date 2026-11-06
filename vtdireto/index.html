@@ -460,11 +460,12 @@ function togglePwd(){
   </div>
 </section>
 <section class="page" id="p-ali-cliente">
-  <div class="banner no-print">ℹ️ <div><b>Resultado Cliente (ALI):</b> escolha o cliente e o mês de referência. GMV, Cartões (Qtde. Cargas) e Pedidos
+  <div class="banner no-print">ℹ️ <div><b>Resultado Cliente (ALI):</b> escolha o cliente na lista (ou <b>Todos os clientes</b> para o consolidado da carteira) e o mês de referência. GMV, Cartões (Qtde. Cargas) e Pedidos
     por <b>data de estocagem</b>, somente Tipo Tarifa = VT. <b>Var. mês</b> = vs mês anterior · <b>YoY</b> = vs mesmo mês do ano anterior.
     Gráficos e tabela mostram por padrão os <b>13 meses</b> até o mês de referência, com os valores sobre as barras (esta aba ignora o filtro de período do topo).</div></div>
   <div class="card" style="margin-bottom:16px"><div class="toolbar">
-    <input type="text" class="input" id="aliCcSearch" list="aliCcList" placeholder="🔍 Digite código, nome ou CNPJ do cliente..." autocomplete="off" style="min-width:380px">
+    <label class="muted">Cliente <select id="aliCcSel" style="min-width:300px;max-width:420px"></select></label>
+    <input type="text" class="input" id="aliCcSearch" list="aliCcList" placeholder="🔍 Buscar por código, nome ou CNPJ..." autocomplete="off" style="min-width:280px">
     <datalist id="aliCcList"></datalist>
     <label class="muted">Mês de referência <select id="aliCcRef"></select></label>
     <span class="count" id="aliCcInfo"></span>
@@ -486,6 +487,20 @@ function togglePwd(){
       <th class="r">Cartões</th><th class="r">Var. mês</th><th class="r">YoY</th>
       <th class="r">Pedidos</th><th class="r">Var. mês</th><th class="r">YoY</th>
       <th class="r">GMV / pedido</th><th class="r">GMV / cartão</th></tr></thead><tbody id="aliCcDet"></tbody></table></div></div>
+  </div>
+  <div id="aliCcAllWrap">
+    <div class="section-title"><h2 id="aliCcAllTitle">Todos os clientes no mês</h2><span class="hint">clique em um cliente para abrir a ficha dele · ordenado por GMV</span></div>
+    <div class="card"><div class="toolbar">
+      <input type="text" class="input" id="aliCcAllQ" placeholder="🔍 Filtrar a lista por código, nome ou CNPJ..." oninput="ccAllTable()">
+      <div class="chips">
+        <button class="chip" data-s="todos" onclick="ccAllSet('todos')">Todos</button>
+        <button class="chip" data-s="mov" onclick="ccAllSet('mov')">Com movimento no mês</button>
+        <button class="chip" data-s="sem" onclick="ccAllSet('sem')">Sem movimento no mês</button>
+      </div>
+      <span class="count" id="aliCcAllCount"></span><div class="grow"></div>
+      <button class="btn no-print" onclick="ccAllExport()">⬇ Exportar CSV</button>
+    </div>
+    <div class="table-wrap"><table class="t"><thead><tr><th>#</th><th>Cliente</th><th class="r">GMV</th><th class="r">% do GMV</th><th class="r">Var. mês</th><th class="r">YoY</th><th class="r">Cartões</th><th class="r">Pedidos</th><th>Status</th></tr></thead><tbody id="aliCcAllBody"></tbody></table></div></div>
   </div>
 </section>
 <section class="page" id="p-ali-resumo">
@@ -1019,13 +1034,25 @@ const ccLabels = { id:'ccLabels', afterDatasetsDraw(ch){
   ctx.restore(); } };
 const fmtCurto = v => (Math.abs(v) >= 1e6 ? (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:2}) + ' mi' : Math.abs(v) >= 1e3 ? (v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mil' : v.toLocaleString('pt-BR',{maximumFractionDigits:0}));
 function ccJanela(r){ const a = Math.max(0, r - 12); return range(a, r); } // 13 meses terminando no mês de referência
+function ccAll(){
+  const n = ALI.months.length, z = () => new Array(n).fill(0);
+  const a = { cod:'TODOS', nome:'Todos os clientes (' + ALI.clientes.length + ')', doc:'', last:null, modulo:'', all:true, gmvArr:z(), cartArr:z(), pedArr:z() };
+  ALI.clientes.forEach(c => { for(let i=0;i<n;i++){ a.gmvArr[i] += c.gmvArr[i]||0; a.cartArr[i] += c.cartArr[i]||0; a.pedArr[i] += (c.pedArr||[])[i]||0; }
+    if(c.last && (!a.last || c.last > a.last)) a.last = c.last; });
+  a.gmvArr = a.gmvArr.map(v => Math.round(v*100)/100);
+  return a;
+}
 function ccInit(){
   if(CC.ready) return; CC.ready = true;
   const cl = ALI.clientes.slice().sort((a,b) => sum(b.gmvArr) - sum(a.gmvArr));
   el('aliCcList').innerHTML = cl.map(c => `<option value="${escHtml(c.cod+' — '+c.nome+(c.doc?' · '+c.doc:''))}"></option>`).join('');
   el('aliCcRef').innerHTML = ALI.months.map((m,i) => `<option value="${i}">${mLbl(i, PROJ.ali)}</option>`).reverse().join('');
   CC.ref = ALI.months.length - 1; if(ALI.months[CC.ref] === CUR_LBL && CC.ref > 0) CC.ref--; el('aliCcRef').value = CC.ref;
-  CC.cod = cl.length ? cl[0].cod : null;
+  CC.cod = '__ALL__';
+  const byName = ALI.clientes.slice().sort((a,b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  el('aliCcSel').innerHTML = `<option value="__ALL__">★ Todos os clientes (${ALI.clientes.length})</option>`
+    + byName.map(c => `<option value="${escHtml(c.cod)}">${escHtml(c.nome)} · ${escHtml(c.cod)}</option>`).join('');
+  el('aliCcSel').onchange = () => { CC.cod = el('aliCcSel').value; el('aliCcSearch').value = ''; renderCliente(); };
   el('aliCcSearch').addEventListener('change', () => {
     const q = el('aliCcSearch').value.trim().toLowerCase(); if(!q) return;
     const dig = q.replace(/\D/g,'');
@@ -1034,22 +1061,53 @@ function ccInit(){
       || ALI.clientes.find(x => (x.nome||'').toLowerCase().includes(q));
     el('aliCcEmpty').style.display = c ? 'none' : ''; el('aliCcBody').style.display = c ? '' : 'none';
     if(c){ CC.cod = c.cod; renderCliente(); }
+    el('aliCcSel').value = c ? c.cod : CC.cod;
   });
   el('aliCcRef').onchange = () => { CC.ref = +el('aliCcRef').value; renderCliente(); };
 }
+
+let ccAllF = 'mov', ccAllRows = [];
+function ccAllSet(f){ ccAllF = f; ccAllTable(); }
+function ccAllTable(){
+  const r = Math.min(CC.ref, ALI.months.length - 1), pv = r > 0 ? r - 1 : -1, ya = ccIdxAnt(r);
+  const tot = ALI.gmv[r] || 0, q = el('aliCcAllQ').value.trim().toLowerCase(), dq = q.replace(/\D/g,'');
+  let rows = ALI.clientes.map(c => { const g = c.gmvArr[r] || 0;
+    const dias = c.last ? Math.floor((new Date(VT_HOJE+'T00:00:00') - new Date(c.last+'T00:00:00')) / 86400000) : null;
+    return { c, g, cart:c.cartArr[r]||0, ped:(c.pedArr||[])[r]||0, gp:pv>=0?c.gmvArr[pv]:null, gy:ya>=0?c.gmvArr[ya]:null, st:statusCliente(dias) }; });
+  document.querySelectorAll('#aliCcAllWrap .chip').forEach(b => b.classList.toggle('on', b.dataset.s === ccAllF));
+  if(ccAllF === 'mov') rows = rows.filter(x => x.g || x.cart || x.ped);
+  if(ccAllF === 'sem') rows = rows.filter(x => !x.g && !x.cart && !x.ped);
+  if(q) rows = rows.filter(x => (x.c.cod+' '+x.c.nome).toLowerCase().includes(q) || (dq.length >= 4 && String(x.c.doc||'').replace(/\D/g,'').includes(dq)));
+  rows.sort((a,b) => b.g - a.g || String(a.c.nome).localeCompare(String(b.c.nome), 'pt-BR'));
+  ccAllRows = rows;
+  el('aliCcAllTitle').textContent = `Todos os clientes — ${mLbl(r, PROJ.ali)}`;
+  el('aliCcAllCount').textContent = `${rows.length} de ${ALI.clientes.length} clientes · GMV listado ${fmtR(sum(rows.map(x=>x.g)))}`;
+  el('aliCcAllBody').innerHTML = rows.map((x,i) => `<tr style="cursor:pointer" onclick="ccPick('${escHtml(x.c.cod)}')"><td>${i+1}</td><td class="name" title="${escHtml(x.c.nome)}"><span class="muted">${escHtml(x.c.cod)}</span> ${escHtml(x.c.nome)}</td>`
+    + `<td class="r">${fmtR(x.g)}</td><td class="r">${tot ? fmtPct(x.g/tot*100) : '—'}</td><td class="r">${ccVar(x.g, x.gp)}</td><td class="r">${ccVar(x.g, x.gy)}</td>`
+    + `<td class="r">${fmtN(x.cart)}</td><td class="r">${fmtN(x.ped)}</td><td><span class="pill ${x.st.cls}">${x.st.label}</span></td></tr>`).join('')
+    || '<tr><td colspan="9" class="muted" style="text-align:center">Nenhum cliente</td></tr>';
+}
+function ccPick(cod){ CC.cod = cod; el('aliCcSearch').value = ''; renderCliente(); window.scrollTo(0, 0); }
+function ccAllExport(){
+  const r = Math.min(CC.ref, ALI.months.length - 1);
+  const L = ['Código;Cliente;CNPJ;GMV;Cartões;Pedidos;Status'].concat(ccAllRows.map(x => [x.c.cod, '"'+String(x.c.nome).replace(/"/g,'""')+'"', x.c.doc||'', x.g.toFixed(2).replace('.',','), x.cart, x.ped, x.st.label].join(';')));
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿'+L.join('\n')], {type:'text/csv;charset=utf-8'}));
+  a.download = `ali_clientes_${ALI.months[r].replace('/','-')}.csv`; a.click();
+}
 function renderCliente(){
   ccInit();
-  const c = ALI.clientes.find(x => String(x.cod) === String(CC.cod));
+  ccAllTable();
+  const c = CC.cod === '__ALL__' ? ccAll() : ALI.clientes.find(x => String(x.cod) === String(CC.cod));
   el('aliCcEmpty').style.display = 'none';
   if(!c){ el('aliCcBody').style.display = 'none'; return; }
   el('aliCcBody').style.display = '';
-  const sInp = el('aliCcSearch'); if(document.activeElement !== sInp) sInp.value = c.cod + ' — ' + c.nome + (c.doc ? ' · ' + c.doc : '');
+  el('aliCcSel').value = CC.cod;
   const M = ALI.months, n = M.length, r = Math.min(CC.ref, n - 1);
   const ped = c.pedArr || M.map(() => 0);
   const dias = c.last ? Math.floor((new Date(VT_HOJE+'T00:00:00') - new Date(c.last+'T00:00:00')) / 86400000) : null;
   const st = statusCliente(dias);
-  el('aliCcInfo').innerHTML = `<span class="pill ${st.cls}">${st.label}</span> Módulo ${escHtml(c.modulo||'')} · última compra ${c.last ? fDate(c.last) : '—'}${dias!=null?' ('+dias+' dias)':''}`;
-  el('aliCcTitle').textContent = `${c.cod} — ${c.nome}`;
+  el('aliCcInfo').innerHTML = c.all ? `Soma de toda a carteira ALI · última compra ${c.last ? fDate(c.last) : '—'}` : `<span class="pill ${st.cls}">${st.label}</span> Módulo ${escHtml(c.modulo||'')} · última compra ${c.last ? fDate(c.last) : '—'}${dias!=null?' ('+dias+' dias)':''}`;
+  el('aliCcTitle').textContent = c.all ? c.nome : `${c.cod} — ${c.nome}`;
   el('aliCcSub').textContent = `Referência: ${mLbl(r, PROJ.ali)} · gráficos e tabela: 13 meses até ${mLbl(r, PROJ.ali)}`;
   const ya = ccIdxAnt(r), pv = r > 0 ? r - 1 : -1;
   const at = (a, i) => i >= 0 ? a[i] : null;
