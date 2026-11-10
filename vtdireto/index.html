@@ -503,6 +503,36 @@ function togglePwd(){
     <div class="table-wrap"><table class="t"><thead><tr><th>#</th><th>Cliente</th><th class="r">GMV</th><th class="r">% do GMV</th><th class="r">Var. mês</th><th class="r">YoY</th><th class="r">Cartões</th><th class="r">Pedidos</th><th>Status</th></tr></thead><tbody id="aliCcAllBody"></tbody></table></div></div>
   </div>
 </section>
+<section class="page" id="p-ali-comp">
+  <div class="banner no-print">ℹ️ <div><b>Comparativo Clientes (ALI):</b> compara cada cliente no <b>mês de referência</b> (ou no Período do topo) com o mês/período anterior.
+    A variação é separada em <b>pararam de comprar</b>, <b>compraram menos</b>, <b>compraram mais</b> e <b>novos/retornos</b>, e a tabela dos <b>10 ofensores</b> lista as maiores quedas em R$.
+    Valores pela regra ALI (a partir de Jan/25: GMV/Taxa pagos, por data de pagamento). Ticket médio = GMV ÷ pedidos.</div></div>
+  <div class="toolbar no-print">
+    <span class="count" id="aliCmpRange"></span>
+    <div class="grow"></div>
+    <div class="chips"><button class="chip on" data-cm="gmv" onclick="cmpSet('metric','gmv')">GMV</button>
+      <button class="chip" data-cm="taxa" onclick="cmpSet('metric','taxa')">Taxa</button>
+      <button class="chip" data-cm="cart" onclick="cmpSet('metric','cart')">Cartões</button></div>
+    <button class="btn" onclick="cmpExport()">⬇ Exportar comparativo (CSV)</button>
+  </div>
+  <div id="aliCmpAviso"></div>
+  <div class="kpis k5" id="aliCmpKpis"></div>
+  <div id="aliCmpBody">
+    <div class="chart-grid">
+      <div class="chart-card"><h3>De onde veio a variação</h3><p class="chart-sub">Impacto líquido por grupo de clientes</p><div class="chart-wrap" style="height:230px"><canvas id="aliCmpDecCh"></canvas></div>
+        <div class="table-wrap"><table class="t"><thead><tr><th>Grupo</th><th class="r">Clientes</th><th class="r">Impacto</th></tr></thead><tbody id="aliCmpDec"></tbody></table></div></div>
+      <div class="chart-card"><h3>Top 10 ofensores</h3><p class="chart-sub" id="aliCmpOfendSub"></p><div class="chart-wrap" style="height:330px"><canvas id="aliCmpOfendCh"></canvas></div></div>
+    </div>
+    <div class="section-title"><h2>Top 10 ofensores do resultado</h2><span class="hint">maiores quedas em R$ vs período anterior · % = parte da queda total</span></div>
+    <div class="card"><div class="table-wrap"><table class="t"><thead><tr><th>#</th><th>Cliente</th><th>Situação</th><th class="r">Anterior</th><th class="r">Atual</th><th class="r">Variação</th><th class="r">Var. %</th><th class="r">Pedidos</th><th class="r">Ticket médio</th><th class="r">% da queda</th></tr></thead><tbody id="aliCmpOfend"></tbody></table></div></div>
+    <div class="section-title"><h2>Top 10 destaques positivos</h2><span class="hint">maiores altas em R$</span></div>
+    <div class="card"><div class="table-wrap"><table class="t"><thead><tr><th>#</th><th>Cliente</th><th>Situação</th><th class="r">Anterior</th><th class="r">Atual</th><th class="r">Variação</th><th class="r">Var. %</th><th class="r">Pedidos</th><th class="r">Ticket médio</th></tr></thead><tbody id="aliCmpPos"></tbody></table></div></div>
+    <div class="section-title"><h2>Todos os clientes</h2><span class="hint" id="aliCmpAllCount"></span></div>
+    <div class="toolbar no-print"><input type="text" class="input" placeholder="🔍 Código, nome ou CNPJ..." oninput="cmpSet('q', this.value)" style="min-width:260px">
+      <select class="input" onchange="cmpSet('sort', this.value)"><option value="dif">Maiores quedas</option><option value="difdesc">Maiores altas</option><option value="b">Maior valor atual</option></select></div>
+    <div class="card"><div class="table-wrap" style="max-height:480px"><table class="t"><thead><tr><th>#</th><th>Cliente</th><th>Situação</th><th class="r">Anterior</th><th class="r">Atual</th><th class="r">Variação</th><th class="r">Var. %</th><th class="r">Pedidos</th><th class="r">Ticket médio</th></tr></thead><tbody id="aliCmpAll"></tbody></table></div></div>
+  </div>
+</section>
 <section class="page" id="p-ali-pedpag">
   <div class="banner no-print">ℹ️ <div><b>Pedido x Pagamento (ALI):</b> compara os pedidos <b>feitos</b> no mês (pasta Pedido) com o mês em que foram <b>pagos</b> (Data Pagamento; pasta Pagamento Carga).
     Premissa: o mês do arquivo da pasta Pedido é o mês do pedido. <b>Valor pago</b> = Vr. Pago (col. Q) · <b>Receita</b> = Vr. Pago de Pagamento taxa (vínculo pelo pedido) · <b>Cartões</b> = Qtde. Cargas do relatório solto vinculado por cliente + pedido + valor (pedidos P-: Qtde Cartão).
@@ -700,6 +730,7 @@ const PAGES = {
     { g:'Clientes' },
     { id:'clientes', t:'Clientes', icon:'users', sub:'Status, módulo e valores por cliente no período', ctrl:['per','ref'], render:()=>renderClientes() },
     { id:'resumo', t:'Resumo Executivo', icon:'target', sub:'Vendas e movimento da base de clientes', ctrl:['per','ref'], render:()=>{ resumoInit('a'); resumoApply('a'); } },
+    { id:'comp', t:'Comparativo Clientes', icon:'users', sub:'O que mudou nas compras dos clientes vs o período anterior e os 10 maiores ofensores do resultado', ctrl:['per','ref'], render:()=>renderComp() },
     { id:'cliente', t:'Resultado Cliente', icon:'chart', sub:'Ficha individual: GMV, cartões, pedidos, evolução e comparativo YoY', ctrl:[], render:()=>renderCliente() },
     { id:'pedpag', t:'Pedido x Pagamento', icon:'chart', sub:'Pedidos feitos no mês e pagos em outro mês', ctrl:['per','ref'], render:()=>renderPedPag() },
     { g:'Comercial' },
@@ -1182,6 +1213,88 @@ function renderCliente(){
   el('aliCcDet').innerHTML = rows;
 }
 
+
+// ===================== COMPARATIVO CLIENTES (ALI) =====================
+// Compara cada cliente na janela atual (mês de referência ou período) com a janela anterior (WIN().prev),
+// separa a variação em: pararam de comprar · compraram menos · compraram mais · novos/retornos, e lista os
+// 10 maiores ofensores (maior queda em R$) e os 10 maiores destaques positivos.
+const CMP = { metric:'gmv', q:'', sort:'dif' };
+const CMP_METRICS = { gmv:{ lbl:'GMV', arr:'gmvArr', money:true }, taxa:{ lbl:'Taxa', arr:'taxaArr', money:true }, cart:{ lbl:'Cartões', arr:'cartArr', money:false } };
+function cmpSet(k, v){ CMP[k] = v; renderComp(); }
+function cmpRows(w){
+  const m = CMP_METRICS[CMP.metric];
+  return ALI.clientes.map(c => {
+    const a = sumIdx(c[m.arr]||[], w.prev), b = sumIdx(c[m.arr]||[], w.cur);
+    const pa = sumIdx(c.pedArr||[], w.prev), pb = sumIdx(c.pedArr||[], w.cur);
+    const ga = sumIdx(c.gmvArr, w.prev), gb = sumIdx(c.gmvArr, w.cur);
+    const cat = a > 0 && b <= 0 ? 'parou' : a <= 0 && b > 0 ? 'novo' : b < a ? 'menos' : b > a ? 'mais' : 'igual';
+    return { c, a, b, dif:b - a, pct:a ? (b - a) / a * 100 : null, pa, pb, ta:pa ? ga / pa : 0, tb:pb ? gb / pb : 0, cat };
+  }).filter(r => r.a !== 0 || r.b !== 0);
+}
+function renderComp(){
+  const w = WIN(), m = CMP_METRICS[CMP.metric], f = v => m.money ? fmtR(v) : fmtN(v);
+  ['gmv','taxa','cart'].forEach(k => { const b = document.querySelector(`#p-ali-comp [data-cm="${k}"]`); if(b) b.classList.toggle('on', k === CMP.metric); });
+  if(!w.prev){
+    el('aliCmpKpis').innerHTML = ''; el('aliCmpBody').style.display = 'none';
+    el('aliCmpAviso').innerHTML = '<div class="banner info">Selecione um período/mês de referência com período anterior disponível (não é possível comparar o primeiro mês do histórico).</div>';
+    return;
+  }
+  el('aliCmpAviso').innerHTML = ''; el('aliCmpBody').style.display = '';
+  const rows = cmpRows(w), T = k => sum(rows.map(r => r[k]));
+  const tot = rows.reduce((o, r) => { o[r.cat].n++; o[r.cat].v += r.dif; return o; },
+    { parou:{n:0,v:0}, menos:{n:0,v:0}, mais:{n:0,v:0}, novo:{n:0,v:0}, igual:{n:0,v:0} });
+  const A = T('a'), B = T('b'), D = B - A, pA = T('pa'), pB = T('pb');
+  const comprA = rows.filter(r => r.a > 0).length, comprB = rows.filter(r => r.b > 0).length;
+  const gA = sum(rows.map(r => sumIdx(r.c.gmvArr, w.prev))), gB = sum(rows.map(r => sumIdx(r.c.gmvArr, w.cur)));
+  const prevName = w.prev.length === 1 ? mLbl(w.prev[0]) : `${mLbl(w.prev[0])} – ${mLbl(w.prev[w.prev.length-1])}`;
+  el('aliCmpRange').textContent = `${w.name} vs ${prevName} · ${m.lbl}`;
+  const kp = (cls, lbl, v, sub) => `<div class="kpi ${cls}"><div class="kpi-label">${lbl}</div><div class="kpi-value">${v}</div><div class="kpi-sub">${sub}</div></div>`;
+  const cor = D < 0 ? 'red' : 'green';
+  el('aliCmpKpis').innerHTML =
+      kp('', `${m.lbl} · ${escHtml(prevName)}`, f(A), `${fmtN(comprA)} clientes com ${m.lbl} no período anterior`)
+    + kp('', `${m.lbl} · ${escHtml(w.name)}`, f(B), `${fmtN(comprB)} clientes com ${m.lbl} no período`)
+    + kp(cor, 'Variação', (D>0?'+':'') + f(D), `${A ? fmtPct((B-A)/A*100) : '—'} vs período anterior`)
+    + kp('cyan', 'Pedidos', `${fmtN(pB)}`, `${fmtN(pA)} no anterior (${pA ? fmtPct((pB-pA)/pA*100) : '—'})`)
+    + kp('purple', 'Ticket médio (GMV/pedido)', fmtR(pB ? gB / pB : 0), `anterior ${fmtR(pA ? gA / pA : 0)} (${pA && pB ? fmtPct(((gB/pB)/(gA/pA)-1)*100) : '—'})`);
+  // decomposição da variação
+  const dec = [['Pararam de comprar', 'parou'], ['Compraram menos', 'menos'], ['Compraram mais', 'mais'], ['Novos / retornos', 'novo']];
+  el('aliCmpDec').innerHTML = dec.map(([lbl, k]) => `<tr><td>${lbl}</td><td class="r">${fmtN(tot[k].n)}</td><td class="r" style="color:${tot[k].v<0?'#C0392B':'#1E8449'};font-weight:700">${tot[k].v>0?'+':''}${f(tot[k].v)}</td></tr>`).join('')
+    + `<tr><td><b>Variação líquida</b></td><td class="r">${fmtN(rows.length)}</td><td class="r" style="font-weight:700">${D>0?'+':''}${f(D)}</td></tr>`;
+  mk('aliCmpDecCh', { type:'bar', data:{ labels:dec.map(d => d[0]), datasets:[{ data:dec.map(d => tot[d[1]].v), borderRadius:4,
+      backgroundColor:dec.map(d => tot[d[1]].v < 0 ? '#C0392B' : '#1E8449') }] },
+    options: baseOpts({ indexAxis:'y', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c => f(c.parsed.x) } } },
+      scales:{ x:{ grid:gridY, ticks:{ callback:v => m.money ? fmtK(v) : fmtN(v) } }, y:{ grid:{display:false} } } }) });
+  // top 10 ofensores / destaques
+  const neg = rows.filter(r => r.dif < 0).sort((x, y) => x.dif - y.dif), pos = rows.filter(r => r.dif > 0).sort((x, y) => y.dif - x.dif);
+  const totNeg = sum(neg.map(r => r.dif)), top10 = neg.slice(0, 10);
+  let acc = 0;
+  const catLbl = { parou:'Parou', menos:'Comprou menos', mais:'Comprou mais', novo:'Novo/retorno', igual:'Igual' };
+  const rowHtml = (r, i, showAcc) => { acc += r.dif; return `<tr><td>${i+1}</td><td>${escHtml(r.c.cod)} · ${escHtml(truncLabel(r.c.nome, 34))}</td><td>${catLbl[r.cat]}</td>`
+    + `<td class="r">${f(r.a)}</td><td class="r">${f(r.b)}</td><td class="r" style="color:${r.dif<0?'#C0392B':'#1E8449'};font-weight:700">${r.dif>0?'+':''}${f(r.dif)}</td>`
+    + `<td class="r">${r.pct===null?'—':fmtPct(r.pct)}</td><td class="r">${fmtN(r.pa)} → ${fmtN(r.pb)}</td><td class="r">${fmtR(r.ta)} → ${fmtR(r.tb)}</td>`
+    + (showAcc ? `<td class="r">${totNeg ? fmtPct(r.dif / totNeg * 100) : '—'}</td>` : '') + `</tr>`; };
+  el('aliCmpOfend').innerHTML = top10.map((r, i) => rowHtml(r, i, true)).join('') || '<tr><td colspan="10" class="muted">Nenhum cliente com queda.</td></tr>';
+  el('aliCmpOfendSub').textContent = `Os 10 maiores respondem por ${f(sum(top10.map(r => r.dif)))} de ${f(totNeg)} em quedas (${totNeg ? fmtPct(sum(top10.map(r => r.dif)) / totNeg * 100) : '—'}) · ${fmtN(neg.length)} clientes com queda`;
+  mk('aliCmpOfendCh', { type:'bar', data:{ labels:top10.map(r => truncLabel(r.c.nome, 22)), datasets:[{ data:top10.map(r => r.dif), backgroundColor:'#C0392B', borderRadius:4 }] },
+    options: baseOpts({ indexAxis:'y', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c => f(c.parsed.x) } } },
+      scales:{ x:{ grid:gridY, ticks:{ callback:v => m.money ? fmtK(v) : fmtN(v) } }, y:{ grid:{display:false} } } }) });
+  acc = 0;
+  el('aliCmpPos').innerHTML = pos.slice(0, 10).map((r, i) => rowHtml(r, i, false)).join('') || '<tr><td colspan="9" class="muted">Nenhum cliente com alta.</td></tr>';
+  // tabela completa
+  const q = CMP.q.trim().toLowerCase();
+  let all = rows.filter(r => !q || (r.c.cod + ' ' + r.c.nome + ' ' + (r.c.doc||'')).toLowerCase().includes(q));
+  all.sort(CMP.sort === 'dif' ? (x, y) => x.dif - y.dif : CMP.sort === 'difdesc' ? (x, y) => y.dif - x.dif : (x, y) => y.b - x.b);
+  el('aliCmpAllCount').textContent = `${fmtN(all.length)} clientes`;
+  acc = 0;
+  el('aliCmpAll').innerHTML = all.slice(0, 400).map((r, i) => rowHtml(r, i, false)).join('') + (all.length > 400 ? `<tr><td colspan="9" class="muted">Mostrando 400 de ${fmtN(all.length)} — use a busca ou exporte o CSV.</td></tr>` : '');
+}
+function cmpExport(){
+  const w = WIN(); if(!w.prev) return;
+  const m = CMP_METRICS[CMP.metric], q = s => '"'+String(s==null?'':s).replace(/"/g,'""')+'"', num = v => (v||0).toFixed(2).replace('.',',');
+  const lines = [['Codigo','Nome','CPF/CNPJ','Categoria',`${m.lbl} anterior`,`${m.lbl} atual`,'Variacao','Variacao %','Pedidos anterior','Pedidos atual','Ticket anterior','Ticket atual'].join(';')];
+  cmpRows(w).sort((x, y) => x.dif - y.dif).forEach(r => lines.push([r.c.cod, q(r.c.nome), q(r.c.doc||''), r.cat, num(r.a), num(r.b), num(r.dif), r.pct===null?'':num(r.pct), r.pa, r.pb, num(r.ta), num(r.tb)].join(';')));
+  downloadCSV(lines, 'vtdireto_ali_comparativo_clientes.csv');
+}
 
 // ===================== PEDIDO x PAGAMENTO (ALI) =====================
 // Segue o filtro do topo (Período + Mês de referência), como as demais abas: cards, matriz e lista usam a janela
