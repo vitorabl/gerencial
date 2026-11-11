@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Contas do Mês — KIM e Tacom</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1a1d27; --card2: #20243a; --border: #2a2f45;
+    --accent: #5b6af0; --accent2: #22d3ee; --accent3: #f59e0b;
+    --accent4: #10b981; --text: #e2e8f0; --muted: #94a3b8; --danger: #f87171;
+    --info: #60a5fa; --tacom: #c084fc;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; margin: 0; font-size: 14px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+
+  /* ── Auth overlay (mesmo padrão dos outros painéis) ── */
+  #auth-overlay { position: fixed; inset: 0; z-index: 999; background: var(--bg); display: flex; align-items: center; justify-content: center; }
+  .box { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 36px 32px; width: 320px; text-align: center; }
+  .box .logo { width: 48px; height: 48px; margin: 0 auto 16px; border-radius: 12px; background: linear-gradient(135deg, var(--accent4), var(--accent2)); display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; }
+  .box h2 { margin: 0 0 4px; font-size: 18px; }
+  .box p.sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  .box input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card2); color: var(--text); font-size: 14px; margin-bottom: 10px; }
+  .box button { width: 100%; padding: 10px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: 600; font-size: 14px; }
+  .box button:hover { background: var(--accent2); }
+  #auth-error { color: var(--danger); font-size: 12px; min-height: 16px; margin-bottom: 8px; }
+  a.back { display: inline-block; margin-top: 16px; font-size: 12px; color: var(--muted); text-decoration: none; }
+
+  /* ── App ── */
+  #app { display: none; }
+  .header { background: linear-gradient(135deg,#1a1d27,#20243a); border-bottom: 1px solid var(--border); padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo { width: 42px; height: 42px; background: linear-gradient(135deg, var(--accent4), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: white; }
+  .header h1 { font-size: 18px; margin: 0; }
+  .header p { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+  .btn-sair-portal { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .btn-sair-portal:hover { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .main { max-width: 1180px; margin: 0 auto; padding: 24px 32px 48px; display: grid; gap: 18px; }
+  .month { display: flex; align-items: center; gap: 4px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 4px; }
+  .month b { min-width: 150px; text-align: center; text-transform: capitalize; font-size: 15px; }
+  .icon-btn { background: transparent; border: 0; width: 32px; height: 32px; border-radius: 8px; font-size: 18px; color: var(--muted); }
+  .icon-btn:hover { background: var(--card2); color: var(--text); }
+  .link-btn { background: transparent; border: 0; color: var(--accent2); font-weight: 600; padding: 4px 8px; border-radius: 6px; }
+  .sync { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+  .sync.ok { background: rgba(16,185,129,.15); color: var(--accent4); }
+  .sync.local { background: rgba(245,158,11,.15); color: var(--accent3); }
+  .sync.err { background: rgba(248,113,113,.15); color: var(--danger); }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+  .tile { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; text-align: left; position: relative; overflow: hidden; }
+  .tile::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); }
+  .tile.t-faltam::before { background: var(--accent3); } .tile.t-apagar::before { background: var(--info); } .tile.t-pagas::before { background: var(--accent4); }
+  .tile.clickable:hover, .tile.active { border-color: var(--accent2); }
+  .tile .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+  .tile .num { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tile .det { color: var(--muted); font-size: 12.5px; }
+  .tile.bad .num { color: var(--danger); }
+  .bar { height: 6px; border-radius: 3px; background: var(--card2); overflow: hidden; margin-top: 4px; }
+  .bar i { display: block; height: 100%; background: var(--accent4); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .seg { display: inline-flex; background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 7px; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--card2); color: var(--accent2); font-weight: 600; }
+  input.search, input.who-input { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 7px 10px; font: inherit; }
+  input.search { flex: 1 1 200px; max-width: 260px; }
+  input.who-input { width: 150px; }
+
+  .list { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 52px minmax(0,2.2fr) 120px 180px minmax(0,1.4fr); gap: 14px; align-items: center; padding: 10px 16px; border-top: 1px solid var(--border); }
+  .row.head { border-top: 0; background: var(--card2); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; padding-block: 8px; }
+  .row.band { color: var(--muted); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; padding-block: 6px; grid-template-columns: 1fr; background: rgba(255,255,255,.02); }
+  .day { font-family: Consolas, ui-monospace, monospace; font-weight: 700; font-size: 18px; text-align: center; line-height: 1; }
+  .day small { display: block; font-size: 10px; color: var(--muted); font-weight: 500; margin-top: 3px; text-transform: uppercase; font-family: 'Segoe UI', sans-serif; }
+  .who { min-width: 0; display: grid; gap: 2px; }
+  .who .name { font-weight: 600; overflow-wrap: anywhere; }
+  .who .meta { color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; }
+  .tag.KIM { color: var(--accent2); } .tag.TACOM { color: var(--tacom); }
+  .val { font-family: Consolas, ui-monospace, monospace; text-align: right; font-variant-numeric: tabular-nums; }
+  .val small { display: block; color: var(--muted); font-family: 'Segoe UI', sans-serif; font-size: 11px; }
+  .checks { display: flex; gap: 6px; }
+  .chk { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: transparent; border-radius: 8px; padding: 6px 9px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .chk .box2 { width: 15px; height: 15px; border-radius: 4px; border: 1.5px solid currentColor; display: grid; place-items: center; font-size: 11px; line-height: 1; }
+  .chk[aria-pressed="true"].arr { background: rgba(96,165,250,.15); border-color: transparent; color: var(--info); }
+  .chk[aria-pressed="true"].paid { background: rgba(16,185,129,.15); border-color: transparent; color: var(--accent4); }
+  .chk[aria-pressed="true"] .box2 { background: currentColor; }
+  .chk[aria-pressed="true"] .box2::after { content: "✓"; color: var(--card); font-weight: 700; }
+  .status { display: grid; gap: 4px; min-width: 0; }
+  .pill { justify-self: start; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
+  .pill.paid { background: rgba(16,185,129,.15); color: var(--accent4); }
+  .pill.arrived { background: rgba(96,165,250,.15); color: var(--info); }
+  .pill.wait { background: var(--card2); color: var(--muted); }
+  .pill.soon { background: rgba(245,158,11,.15); color: var(--accent3); }
+  .pill.late { background: rgba(248,113,113,.15); color: var(--danger); }
+  .obs { border: 1px dashed var(--border); background: transparent; color: var(--text); font: inherit; font-size: 12.5px; padding: 4px 8px; border-radius: 6px; width: 100%; }
+  .obs:focus { border-style: solid; }
+  .upd { font-size: 11px; color: var(--muted); }
+  .empty { padding: 32px 16px; text-align: center; color: var(--muted); }
+  .note { color: var(--muted); font-size: 12.5px; }
+
+  @media (max-width: 860px) {
+    .header, .main { padding-left: 16px; padding-right: 16px; }
+    .tiles { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .row { grid-template-columns: 44px minmax(0,1fr) auto; grid-template-areas: "d w v" "d c c" "d s s"; row-gap: 8px; }
+    .row.head { display: none; }
+    .row > .day { grid-area: d; align-self: start; } .row > .who { grid-area: w; } .row > .val { grid-area: v; align-self: start; }
+    .row > .checks { grid-area: c; } .row > .status { grid-area: s; }
+  }
+  body.sem-valor .row:not(.band) { grid-template-columns: 52px minmax(0,2.4fr) 180px minmax(0,1.6fr); }
+  body.sem-valor .val { display: none; }
+  @media print { .btn-sair-portal { display: none !important; } }
+</style>
+</head>
+<body>
+
+<div id="auth-overlay">
+  <div class="box">
+    <div class="logo">$</div>
+    <h2>Contas do Mês</h2>
+    <p class="sub">Digite a senha para acessar</p>
+    <input id="auth-input" type="password" placeholder="Senha" onkeydown="if(event.key==='Enter')checkAuth()">
+    <div id="auth-error"></div>
+    <button onclick="checkAuth()">Entrar</button>
+    <br><a class="back" href="../">&larr; Voltar</a>
+  </div>
+</div>
+
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">$</div>
+      <div>
+        <h1>Contas do Mês &middot; KIM e Tacom</h1>
+        <p>Despesas recorrentes por dia de vencimento: o boleto chegou? já foi pago?</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <span class="sync local" id="sync">Modo local</span>
+      <div class="month" role="group" aria-label="Mês">
+        <button class="icon-btn" id="prevM" aria-label="Mês anterior">&lsaquo;</button>
+        <b id="mLabel">—</b>
+        <button class="icon-btn" id="nextM" aria-label="Próximo mês">&rsaquo;</button>
+        <button class="link-btn" id="todayM">Hoje</button>
+      </div>
+      <button class="btn-sair-portal" onclick="sairPainel()">&larr; Sair</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <section class="tiles" aria-label="Resumo do mês">
+      <div class="tile"><span class="lbl">Esperadas no mês</span><span class="num" id="tTotal">—</span><span class="det" id="tTotalV"></span></div>
+      <button class="tile clickable t-faltam" data-f="faltam" id="tileFaltam"><span class="lbl">Ainda não chegaram</span><span class="num" id="tFaltam">—</span><span class="det" id="tFaltamD"></span></button>
+      <button class="tile clickable t-apagar" data-f="apagar" id="tileApagar"><span class="lbl">Chegaram, a pagar</span><span class="num" id="tApagar">—</span><span class="det" id="tApagarD"></span></button>
+      <button class="tile clickable t-pagas" data-f="pagas" id="tilePagas"><span class="lbl">Pagas</span><span class="num" id="tPagas">—</span><span class="det" id="tPagasD"></span><div class="bar"><i id="tBar" style="width:0%"></i></div></button>
+    </section>
+
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Empresa" id="segEmp">
+        <button data-v="" aria-pressed="true">Todas</button><button data-v="KIM" aria-pressed="false">KIM</button><button data-v="TACOM" aria-pressed="false">Tacom</button>
+      </div>
+      <div class="seg" role="group" aria-label="Situação" id="segSt">
+        <button data-v="" aria-pressed="true">Todas</button><button data-v="faltam" aria-pressed="false">Não chegaram</button><button data-v="apagar" aria-pressed="false">A pagar</button><button data-v="pagas" aria-pressed="false">Pagas</button>
+      </div>
+      <input class="search" id="q" type="search" placeholder="Buscar fornecedor" aria-label="Buscar fornecedor">
+      <input class="who-input" id="resp" placeholder="Seu nome" aria-label="Seu nome (aparece em quem marcou)">
+      <button class="link-btn" id="syncBtn">&#8635; Sincronizar</button>
+    </div>
+
+    <section class="list" id="list" aria-live="polite">
+      <div class="row head"><span>Dia</span><span>Fornecedor</span><span class="val" style="text-align:right">Valor médio</span><span>Controle</span><span>Situação e observação</span></div>
+    </section>
+
+    <p class="note" id="geradoEm"></p>
+  </div>
+</div>
+
+<script>
+/* CONTAS_DATA_START */
+const DESPESAS = [{"id": "kim-alloyal", "empresa": "KIM", "fornecedor": "ALLOYAL", "categoria": "Tecnologia", "dia": 21, "lancamentosMes": 1, "ativo": true}, {"id": "kim-azure", "empresa": "KIM", "fornecedor": "AZURE", "categoria": "Tecnologia", "dia": 28, "lancamentosMes": 2, "ativo": true}, {"id": "kim-adjust", "empresa": "KIM", "fornecedor": "Adjust", "categoria": "Despesas de marketing", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-bb-conta-63172-8", "empresa": "KIM", "fornecedor": "BB (Conta 63172-8)", "categoria": "Despesas financeiras", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-cesmor-centro-de-seguranca", "empresa": "KIM", "fornecedor": "CESMOR - CENTRO DE SEGURANÇA", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-colabwork-ltda", "empresa": "KIM", "fornecedor": "COLABWORK LTDA", "categoria": "Consultorias e assessorias", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-contrei", "empresa": "KIM", "fornecedor": "CONTREI", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-drogaria-araujo", "empresa": "KIM", "fornecedor": "Drogaria Araújo", "categoria": "Despesas de pessoal", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-fgts-fundo-garantia-tempo-servico", "empresa": "KIM", "fornecedor": "FGTS - FUNDO GARANTIA TEMPO SERVICO", "categoria": "Despesas de pessoal", "dia": 19, "lancamentosMes": 1, "ativo": true}, {"id": "kim-geosite", "empresa": "KIM", "fornecedor": "Geosite", "categoria": "Tecnologia", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-grupo-zelo", "empresa": "KIM", "fornecedor": "Grupo Zelo", "categoria": "Despesas de marketing", "dia": 15, "lancamentosMes": 1, "ativo": true}, {"id": "kim-igor-tonussi", "empresa": "KIM", "fornecedor": "IGOR TONUSSI", "categoria": "Despesas de pessoal", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-juridico", "empresa": "KIM", "fornecedor": "Juridico", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-mobile-solution", "empresa": "KIM", "fornecedor": "MOBILE SOLUTION", "categoria": "Tecnologia", "dia": 25, "lancamentosMes": 1, "ativo": true}, {"id": "kim-motiva-beneficio", "empresa": "KIM", "fornecedor": "Motiva Beneficio", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-prefeitura-de-belo-horizonte", "empresa": "KIM", "fornecedor": "Prefeitura de Belo Horizonte", "categoria": "Impostos", "dia": 8, "lancamentosMes": 2, "ativo": true}, {"id": "kim-prudentia", "empresa": "KIM", "fornecedor": "Prudentia", "categoria": "Despesas de pessoal", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-sodexo", "empresa": "KIM", "fornecedor": "SODEXO", "categoria": "Despesas de pessoal", "dia": 21, "lancamentosMes": 1, "ativo": true}, {"id": "kim-tim-chips", "empresa": "KIM", "fornecedor": "TIM CHIPS", "categoria": "Despesas gerais", "dia": 2, "lancamentosMes": 5, "ativo": true}, {"id": "kim-tolvnow", "empresa": "KIM", "fornecedor": "TOLVNOW", "categoria": "Despesas gerais", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-toquio", "empresa": "KIM", "fornecedor": "TOQUIO", "categoria": "Despesas de marketing", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-uber-do-brasil", "empresa": "KIM", "fornecedor": "UBER DO BRASIL", "categoria": "Despesas de viagens", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "kim-unimed-bh-coop-de-trabalho-medico-lt", "empresa": "KIM", "fornecedor": "UNIMED-BH COOP.DE TRABALHO MEDICO LTDA", "categoria": "Despesas de pessoal", "dia": 15, "lancamentosMes": 1, "ativo": true}, {"id": "kim-zenvia-whatsapp", "empresa": "KIM", "fornecedor": "Zenvia (Whatsapp)", "categoria": "Tecnologia", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-650-industries-expo", "empresa": "TACOM", "fornecedor": "650 INDUSTRIES (EXPO)", "categoria": "Tecnologia", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-asa-driva-tecnologia-l", "empresa": "TACOM", "fornecedor": "ASA*DRIVA TECNOLOGIA L", "categoria": "Despesas de marketing", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-aws", "empresa": "TACOM", "fornecedor": "AWS", "categoria": "Tecnologia", "dia": 1, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-active-campaingn", "empresa": "TACOM", "fornecedor": "Active Campaingn", "categoria": "Despesas de marketing", "dia": 22, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-alpina-capital", "empresa": "TACOM", "fornecedor": "Alpina Capital", "categoria": "Consultorias e assessorias", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-base-2", "empresa": "TACOM", "fornecedor": "BASE 2", "categoria": "Despesas de pessoal", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-claude-ia", "empresa": "TACOM", "fornecedor": "CLAUDE(IA)", "categoria": "Tecnologia", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-cloudflare", "empresa": "TACOM", "fornecedor": "CloudFlare", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-datadog", "empresa": "TACOM", "fornecedor": "DataDOG", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-exact-sales", "empresa": "TACOM", "fornecedor": "Exact Sales", "categoria": "Despesas de marketing", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-figma", "empresa": "TACOM", "fornecedor": "FIGMA", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-folha-encargos", "empresa": "TACOM", "fornecedor": "Folha + Encargos", "categoria": "Despesas de pessoal", "dia": 27, "lancamentosMes": 2, "ativo": true}, {"id": "tacom-jira", "empresa": "TACOM", "fornecedor": "JIRA", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-microsoftbi", "empresa": "TACOM", "fornecedor": "MicrosoftBI", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-movidesk", "empresa": "TACOM", "fornecedor": "Movidesk", "categoria": "Despesas gerais", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-onesignal", "empresa": "TACOM", "fornecedor": "Onesignal", "categoria": "Despesas de marketing", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-rd-station", "empresa": "TACOM", "fornecedor": "RD Station", "categoria": "Despesas de marketing", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-tivit", "empresa": "TACOM", "fornecedor": "TIVIT", "categoria": "Tecnologia", "dia": 27, "lancamentosMes": 1, "ativo": true}];
+const CONTAS_CFG = {"url": "https://script.google.com/macros/s/AKfycbwlLzZIRYmpmUZuSB9ZEQMmnqM97WXIE-tzKSpi7XCD8PsNGvw3uYMk4hcdWNrSnc2d/exec", "token": "VTDireto2026"};
+const SENHA_HASH = "4a79339d15e3fd6f4fd7cd0e6468f8e8fe5118ecb7c6a33235bf0c325d4a3d5c";
+const GERADO_EM = "11/11/2026 12:54";
+/* CONTAS_DATA_END */
+
+var AUTH_KEY = 'contas_auth';
+async function sha256(t){
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+  return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join('');
+}
+(function(){
+  if (sessionStorage.getItem(AUTH_KEY) === '1') showApp();
+  else document.getElementById('auth-input').focus();
+})();
+function sairPainel(){ try { sessionStorage.removeItem(AUTH_KEY); } catch(e) {} window.location.href = '../'; }
+async function checkAuth(){
+  var v = document.getElementById('auth-input').value;
+  if (await sha256(v) === SENHA_HASH) { sessionStorage.setItem(AUTH_KEY, '1'); showApp(); }
+  else document.getElementById('auth-error').textContent = 'Senha incorreta.';
+}
+function showApp(){
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  if (document.readyState !== 'loading') initApp(); else document.addEventListener('DOMContentLoaded', initApp);
+}
+
+var started = false;
+function initApp(){
+  if (started) return; started = true;
+  const $ = id => document.getElementById(id);
+  const fmtBRL = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const fmtK = v => v >= 1e6 ? 'R$ ' + (v/1e6).toLocaleString('pt-BR', {maximumFractionDigits: 2}) + ' mi' : v >= 1e4 ? 'R$ ' + Math.round(v/1e3).toLocaleString('pt-BR') + ' mil' : fmtBRL(v);
+  const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const DOW = ['dom','seg','ter','qua','qui','sex','sáb'];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const iso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  const br = s => { if (!s) return ''; const p = String(s).slice(0,10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : s; };
+  const LS_KEY = 'contas_marcacoes_v1';
+  const shared = !!(CONTAS_CFG.url && CONTAS_CFG.token);
+  const SEM_VALOR = DESPESAS.every(d => d.valor === undefined || d.valor === null);
+  if (SEM_VALOR) document.body.classList.add('sem-valor');
+
+  let cur = new Date(today.getFullYear(), today.getMonth(), 1);
+  let fEmp = '', fSt = '', q = '';
+  let marks = {};   // "AAAA-MM|id" -> {chegou, data_chegada, pago, data_pago, obs, resp, upd}
+  const mesKey = () => cur.getFullYear() + '-' + String(cur.getMonth()+1).padStart(2,'0');
+  const key = id => mesKey() + '|' + id;
+
+  try { marks = JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; } catch(e) { marks = {}; }
+  try { $('resp').value = localStorage.getItem('contas_resp') || ''; } catch(e) {}
+  $('resp').addEventListener('change', () => { try { localStorage.setItem('contas_resp', $('resp').value.trim()); } catch(e) {} });
+  const persistLocal = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(marks)); } catch(e) {} };
+  function setSync(cls, txt){ const s = $('sync'); s.className = 'sync ' + cls; s.textContent = txt; }
+  setSync(shared ? 'ok' : 'local', shared ? 'Compartilhado (planilha ALI · aba Contas do Mes)' : 'Modo local: salvo só neste navegador');
+  $('geradoEm').textContent = 'Lista de despesas recorrentes atualizada em ' + GERADO_EM + '. Para incluir, remover ou corrigir uma despesa, edite Automacao/contas/despesas_recorrentes.json e rode update_contas.py.';
+
+  async function pull(){
+    if (!shared) return;
+    setSync('ok', 'Sincronizando…');
+    try {
+      const r = await fetch(CONTAS_CFG.url + '?action=contas_list&token=' + encodeURIComponent(CONTAS_CFG.token));
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'erro');
+      (j.rows || []).forEach(x => { const k = x.mes + '|' + x.id; if (!marks[k] || String(marks[k].upd || '') <= String(x.upd || '')) marks[k] = x; });
+      persistLocal(); setSync('ok', 'Compartilhado (planilha ALI · aba Contas do Mes)'); render();
+    } catch(e) { setSync('err', 'Sem conexão com a planilha: salvo neste navegador'); }
+  }
+  async function push(id){
+    const desp = DESPESAS.find(x => x.id === id) || {};
+    const rec = Object.assign({ mes: mesKey(), id: id, fornecedor: (desp.empresa || '') + ' · ' + (desp.fornecedor || '') }, marks[key(id)]);
+    persistLocal();
+    if (!shared) return;
+    try {
+      const r = await fetch(CONTAS_CFG.url, { method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({ token: CONTAS_CFG.token, action: 'contas_save', rec: rec }) });
+      const j = await r.json(); if (!j.ok) throw new Error(j.error);
+      setSync('ok', 'Compartilhado (planilha ALI · aba Contas do Mes)');
+    } catch(e) { setSync('err', 'Não salvou na planilha: tente Sincronizar'); }
+  }
+  function update(id, patch){
+    marks[key(id)] = Object.assign({}, marks[key(id)] || {}, patch, { resp: $('resp').value.trim(), upd: new Date().toISOString() });
+    render(); push(id);
+  }
+  function toggle(id, field){
+    const c = marks[key(id)] || {};
+    const on = !c[field];
+    const p = { [field]: on };
+    if (field === 'chegou') p.data_chegada = on ? iso(today) : '';
+    if (field === 'pago') { p.data_pago = on ? iso(today) : ''; if (on && !c.chegou) { p.chegou = true; p.data_chegada = c.data_chegada || iso(today); } }
+    update(id, p);
+  }
+
+  function dueDate(dia){ const last = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate(); return new Date(cur.getFullYear(), cur.getMonth(), Math.min(dia, last)); }
+  function statusOf(d){
+    const c = marks[key(d.id)] || {};
+    const days = Math.round((dueDate(d.dia) - today) / 864e5);
+    const em = n => n === 0 ? 'hoje' : 'em ' + n + 'd';
+    if (c.pago) return { k: 'pagas', cls: 'paid', txt: 'Paga' + (c.data_pago ? ' em ' + br(c.data_pago) : '') };
+    if (c.chegou) return days < 0 ? { k: 'apagar', cls: 'late', txt: 'Chegou · vencida há ' + (-days) + 'd' } : { k: 'apagar', cls: 'arrived', txt: 'Chegou · vence ' + em(days) };
+    if (days < 0) return { k: 'faltam', cls: 'late', txt: 'Não chegou · venceu há ' + (-days) + 'd', late: true };
+    if (days <= 5) return { k: 'faltam', cls: 'soon', txt: 'Não chegou · vence ' + em(days), soon: true };
+    return { k: 'faltam', cls: 'wait', txt: 'Aguardando' };
+  }
+
+  function render(){
+    $('mLabel').textContent = MESES[cur.getMonth()] + ' ' + cur.getFullYear();
+    const base = DESPESAS.filter(d => !fEmp || d.empresa === fEmp).map(d => [d, statusOf(d)]);
+    const sum = a => a.reduce((s, [d]) => s + (Number(d.valor) || 0), 0);
+    const faltam = base.filter(([, s]) => s.k === 'faltam'), apagar = base.filter(([, s]) => s.k === 'apagar'), pagas = base.filter(([, s]) => s.k === 'pagas');
+    const late = faltam.filter(([, s]) => s.late).length, soon = faltam.filter(([, s]) => s.soon).length;
+    $('tTotal').textContent = base.length; $('tTotalV').textContent = SEM_VALOR ? (base.filter(([d]) => d.empresa === 'KIM').length + ' KIM · ' + base.filter(([d]) => d.empresa === 'TACOM').length + ' Tacom') : fmtK(sum(base)) + ' em valor médio';
+    $('tFaltam').textContent = faltam.length; $('tFaltamD').textContent = (late ? late + ' já vencidas' : 'nenhuma vencida') + (soon ? ' · ' + soon + ' vencem em até 5 dias' : '');
+    $('tileFaltam').classList.toggle('bad', late > 0);
+    $('tApagar').textContent = apagar.length; $('tApagarD').textContent = apagar.length ? (SEM_VALOR ? 'aguardando pagamento' : fmtK(sum(apagar)) + ' a sair do caixa') : 'nada pendente';
+    $('tPagas').textContent = pagas.length + ' de ' + base.length; $('tPagasD').textContent = SEM_VALOR ? Math.round(base.length ? pagas.length / base.length * 100 : 0) + '% do mês' : fmtK(sum(pagas)) + ' pagos';
+    $('tBar').style.width = (base.length ? pagas.length / base.length * 100 : 0) + '%';
+    ['tileFaltam','tileApagar','tilePagas'].forEach(i => $(i).classList.toggle('active', $(i).dataset.f === fSt));
+
+    const ql = q.trim().toLowerCase();
+    const rows = base.filter(([d, s]) => (!fSt || s.k === fSt) && (!ql || (d.fornecedor + ' ' + (d.categoria || '')).toLowerCase().includes(ql)))
+                     .sort((a, b) => a[0].dia - b[0].dia || a[0].fornecedor.localeCompare(b[0].fornecedor));
+    const list = $('list');
+    list.querySelectorAll('.row:not(.head), .empty').forEach(n => n.remove());
+    if (!rows.length) { list.insertAdjacentHTML('beforeend', '<div class="empty">Nenhuma despesa com esses filtros.</div>'); return; }
+    let band = null; const frag = document.createDocumentFragment();
+    for (const [d, s] of rows) {
+      const due = dueDate(d.dia);
+      const b = d.dia <= 10 ? 'Dias 1 a 10' : d.dia <= 20 ? 'Dias 11 a 20' : 'Dias 21 ao fim do mês';
+      if (b !== band) { const el = document.createElement('div'); el.className = 'row band'; el.textContent = b; frag.appendChild(el); band = b; }
+      const c = marks[key(d.id)] || {};
+      const row = document.createElement('div'); row.className = 'row';
+      row.innerHTML = '<div class="day">' + String(due.getDate()).padStart(2,'0') + '<small>' + DOW[due.getDay()] + '</small></div>'
+        + '<div class="who"><span class="name"></span><span class="meta"><span class="tag ' + (d.empresa === 'TACOM' ? 'TACOM' : 'KIM') + '">' + (d.empresa === 'TACOM' ? 'TACOM' : 'KIM') + '</span><span class="cat"></span></span></div>'
+        + '<div class="val">' + fmtBRL(d.valor).replace('R$ ', '') + '<small>R$ médio/mês</small></div><div class="checks"></div><div class="status"></div>';
+      row.querySelector('.name').textContent = d.fornecedor;
+      row.querySelector('.cat').textContent = (d.categoria || '') + (d.lancamentosMes > 1 ? ' · ' + d.lancamentosMes + ' cobranças/mês' : '');
+      const mk = (cls, label, on, dt, field) => {
+        const btn = document.createElement('button'); btn.className = 'chk ' + cls; btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        btn.innerHTML = '<span class="box2" aria-hidden="true"></span>'; const t = document.createElement('span'); t.textContent = label + (on && dt ? ' ' + br(dt) : ''); btn.appendChild(t);
+        btn.addEventListener('click', () => toggle(d.id, field)); return btn;
+      };
+      row.querySelector('.checks').append(mk('arr', 'Chegou', c.chegou, c.data_chegada, 'chegou'), mk('paid', 'Pago', c.pago, c.data_pago, 'pago'));
+      const st = row.querySelector('.status');
+      const pill = document.createElement('span'); pill.className = 'pill ' + s.cls; pill.textContent = s.txt; st.appendChild(pill);
+      const obs = document.createElement('input'); obs.className = 'obs'; obs.placeholder = 'Observação do mês'; obs.value = c.obs || ''; obs.setAttribute('aria-label', 'Observação para ' + d.fornecedor);
+      obs.addEventListener('change', () => update(d.id, { obs: obs.value.trim().slice(0, 300) }));
+      st.appendChild(obs);
+      if (c.resp || c.upd) { const u = document.createElement('span'); u.className = 'upd'; u.textContent = 'Atualizado' + (c.resp ? ' por ' + c.resp : '') + (c.upd ? ' em ' + br(c.upd) : ''); st.appendChild(u); }
+      frag.appendChild(row);
+    }
+    list.appendChild(frag);
+  }
+
+  const step = n => { cur = new Date(cur.getFullYear(), cur.getMonth() + n, 1); render(); };
+  $('prevM').onclick = () => step(-1); $('nextM').onclick = () => step(1);
+  $('todayM').onclick = () => { cur = new Date(today.getFullYear(), today.getMonth(), 1); render(); };
+  const seg = (id, set) => $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $(id).querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); set(b.dataset.v); render(); });
+  seg('segEmp', v => fEmp = v); seg('segSt', v => fSt = v);
+  document.querySelectorAll('.tile.clickable').forEach(t => t.addEventListener('click', () => {
+    fSt = fSt === t.dataset.f ? '' : t.dataset.f;
+    $('segSt').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.dataset.v === fSt ? 'true' : 'false')); render();
+  }));
+  $('q').addEventListener('input', e => { q = e.target.value; render(); });
+  $('syncBtn').addEventListener('click', pull);
+  render(); pull();
+}
+</script>
+</body>
+</html>
