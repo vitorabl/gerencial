@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Contas do Mês — KIM e Tacom</title>
+<title>Contas do Mês — KIM, Tacom e Motiva</title>
 <style>
   :root {
     --bg: #0f1117; --card: #1a1d27; --card2: #20243a; --border: #2a2f45;
     --accent: #5b6af0; --accent2: #22d3ee; --accent3: #f59e0b;
     --accent4: #10b981; --text: #e2e8f0; --muted: #94a3b8; --danger: #f87171;
-    --info: #60a5fa; --tacom: #c084fc;
+    --info: #60a5fa; --tacom: #c084fc; --motiva: #fb923c;
   }
   * { box-sizing: border-box; }
   body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; margin: 0; font-size: 14px; }
@@ -52,7 +52,7 @@
   .tiles { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
   .tile { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; text-align: left; position: relative; overflow: hidden; }
   .tile::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); }
-  .tile.t-faltam::before { background: var(--accent3); } .tile.t-apagar::before { background: var(--info); } .tile.t-pagas::before { background: var(--accent4); }
+  .tile.t-faltam::before { background: var(--accent3); } .tile.t-alerta::before { background: var(--danger); } .tile.t-chegaram::before { background: var(--accent4); }
   .tile.clickable:hover, .tile.active { border-color: var(--accent2); }
   .tile .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
   .tile .num { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -70,7 +70,7 @@
   input.who-input { width: 150px; }
 
   .list { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-  .row { display: grid; grid-template-columns: 52px minmax(0,2.2fr) 120px 180px minmax(0,1.4fr); gap: 14px; align-items: center; padding: 10px 16px; border-top: 1px solid var(--border); }
+  .row { display: grid; grid-template-columns: 52px minmax(0,2.2fr) 120px 130px minmax(0,1.6fr); gap: 14px; align-items: center; padding: 10px 16px; border-top: 1px solid var(--border); }
   .row.head { border-top: 0; background: var(--card2); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; padding-block: 8px; }
   .row.band { color: var(--muted); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; padding-block: 6px; grid-template-columns: 1fr; background: rgba(255,255,255,.02); }
   .day { font-family: Consolas, ui-monospace, monospace; font-weight: 700; font-size: 18px; text-align: center; line-height: 1; }
@@ -79,7 +79,7 @@
   .who .name { font-weight: 600; overflow-wrap: anywhere; }
   .who .meta { color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; }
-  .tag.KIM { color: var(--accent2); } .tag.TACOM { color: var(--tacom); }
+  .tag.KIM { color: var(--accent2); } .tag.TACOM { color: var(--tacom); } .tag.MOTIVA { color: var(--motiva); }
   .val { font-family: Consolas, ui-monospace, monospace; text-align: right; font-variant-numeric: tabular-nums; }
   .val small { display: block; color: var(--muted); font-family: 'Segoe UI', sans-serif; font-size: 11px; }
   .checks { display: flex; gap: 6px; }
@@ -110,7 +110,7 @@
     .row > .day { grid-area: d; align-self: start; } .row > .who { grid-area: w; } .row > .val { grid-area: v; align-self: start; }
     .row > .checks { grid-area: c; } .row > .status { grid-area: s; }
   }
-  body.sem-valor .row:not(.band) { grid-template-columns: 52px minmax(0,2.4fr) 180px minmax(0,1.6fr); }
+  body.sem-valor .row:not(.band) { grid-template-columns: 52px minmax(0,2.4fr) 130px minmax(0,1.8fr); }
   body.sem-valor .val { display: none; }
   @media print { .btn-sair-portal { display: none !important; } }
 </style>
@@ -134,8 +134,8 @@
     <div class="header-left">
       <div class="logo">$</div>
       <div>
-        <h1>Contas do Mês &middot; KIM e Tacom</h1>
-        <p>Despesas recorrentes por dia de vencimento: o boleto chegou? já foi pago?</p>
+        <h1>Contas do Mês &middot; KIM, Tacom e Motiva</h1>
+        <p>Despesas recorrentes por dia de vencimento: o boleto ou a nota já chegou?</p>
       </div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
@@ -154,16 +154,16 @@
     <section class="tiles" aria-label="Resumo do mês">
       <div class="tile"><span class="lbl">Esperadas no mês</span><span class="num" id="tTotal">—</span><span class="det" id="tTotalV"></span></div>
       <button class="tile clickable t-faltam" data-f="faltam" id="tileFaltam"><span class="lbl">Ainda não chegaram</span><span class="num" id="tFaltam">—</span><span class="det" id="tFaltamD"></span></button>
-      <button class="tile clickable t-apagar" data-f="apagar" id="tileApagar"><span class="lbl">Chegaram, a pagar</span><span class="num" id="tApagar">—</span><span class="det" id="tApagarD"></span></button>
-      <button class="tile clickable t-pagas" data-f="pagas" id="tilePagas"><span class="lbl">Pagas</span><span class="num" id="tPagas">—</span><span class="det" id="tPagasD"></span><div class="bar"><i id="tBar" style="width:0%"></i></div></button>
+      <button class="tile clickable t-alerta" data-f="alerta" id="tileAlerta"><span class="lbl">Alerta: vence em até 10 dias</span><span class="num" id="tAlerta">—</span><span class="det" id="tAlertaD"></span></button>
+      <button class="tile clickable t-chegaram" data-f="chegaram" id="tileChegaram"><span class="lbl">Chegaram</span><span class="num" id="tChegaram">—</span><span class="det" id="tChegaramD"></span><div class="bar"><i id="tBar" style="width:0%"></i></div></button>
     </section>
 
     <div class="toolbar">
       <div class="seg" role="group" aria-label="Empresa" id="segEmp">
-        <button data-v="" aria-pressed="true">Todas</button><button data-v="KIM" aria-pressed="false">KIM</button><button data-v="TACOM" aria-pressed="false">Tacom</button>
+        <button data-v="" aria-pressed="true">Todas</button><button data-v="KIM" aria-pressed="false">KIM</button><button data-v="TACOM" aria-pressed="false">Tacom</button><button data-v="MOTIVA" aria-pressed="false">Motiva</button>
       </div>
       <div class="seg" role="group" aria-label="Situação" id="segSt">
-        <button data-v="" aria-pressed="true">Todas</button><button data-v="faltam" aria-pressed="false">Não chegaram</button><button data-v="apagar" aria-pressed="false">A pagar</button><button data-v="pagas" aria-pressed="false">Pagas</button>
+        <button data-v="" aria-pressed="true">Todas</button><button data-v="faltam" aria-pressed="false">Não chegaram</button><button data-v="alerta" aria-pressed="false">Alerta 10 dias</button><button data-v="chegaram" aria-pressed="false">Chegaram</button>
       </div>
       <input class="search" id="q" type="search" placeholder="Buscar fornecedor" aria-label="Buscar fornecedor">
       <input class="who-input" id="resp" placeholder="Seu nome" aria-label="Seu nome (aparece em quem marcou)">
@@ -180,10 +180,10 @@
 
 <script>
 /* CONTAS_DATA_START */
-const DESPESAS = [{"id": "kim-alloyal", "empresa": "KIM", "fornecedor": "ALLOYAL", "categoria": "Tecnologia", "dia": 21, "lancamentosMes": 1, "ativo": true}, {"id": "kim-azure", "empresa": "KIM", "fornecedor": "AZURE", "categoria": "Tecnologia", "dia": 28, "lancamentosMes": 2, "ativo": true}, {"id": "kim-adjust", "empresa": "KIM", "fornecedor": "Adjust", "categoria": "Despesas de marketing", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-bb-conta-63172-8", "empresa": "KIM", "fornecedor": "BB (Conta 63172-8)", "categoria": "Despesas financeiras", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-cesmor-centro-de-seguranca", "empresa": "KIM", "fornecedor": "CESMOR - CENTRO DE SEGURANÇA", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-colabwork-ltda", "empresa": "KIM", "fornecedor": "COLABWORK LTDA", "categoria": "Consultorias e assessorias", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-contrei", "empresa": "KIM", "fornecedor": "CONTREI", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-drogaria-araujo", "empresa": "KIM", "fornecedor": "Drogaria Araújo", "categoria": "Despesas de pessoal", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-fgts-fundo-garantia-tempo-servico", "empresa": "KIM", "fornecedor": "FGTS - FUNDO GARANTIA TEMPO SERVICO", "categoria": "Despesas de pessoal", "dia": 19, "lancamentosMes": 1, "ativo": true}, {"id": "kim-geosite", "empresa": "KIM", "fornecedor": "Geosite", "categoria": "Tecnologia", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-grupo-zelo", "empresa": "KIM", "fornecedor": "Grupo Zelo", "categoria": "Despesas de marketing", "dia": 15, "lancamentosMes": 1, "ativo": true}, {"id": "kim-igor-tonussi", "empresa": "KIM", "fornecedor": "IGOR TONUSSI", "categoria": "Despesas de pessoal", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-juridico", "empresa": "KIM", "fornecedor": "Juridico", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-mobile-solution", "empresa": "KIM", "fornecedor": "MOBILE SOLUTION", "categoria": "Tecnologia", "dia": 25, "lancamentosMes": 1, "ativo": true}, {"id": "kim-motiva-beneficio", "empresa": "KIM", "fornecedor": "Motiva Beneficio", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-prefeitura-de-belo-horizonte", "empresa": "KIM", "fornecedor": "Prefeitura de Belo Horizonte", "categoria": "Impostos", "dia": 8, "lancamentosMes": 2, "ativo": true}, {"id": "kim-prudentia", "empresa": "KIM", "fornecedor": "Prudentia", "categoria": "Despesas de pessoal", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-sodexo", "empresa": "KIM", "fornecedor": "SODEXO", "categoria": "Despesas de pessoal", "dia": 21, "lancamentosMes": 1, "ativo": true}, {"id": "kim-tim-chips", "empresa": "KIM", "fornecedor": "TIM CHIPS", "categoria": "Despesas gerais", "dia": 2, "lancamentosMes": 5, "ativo": true}, {"id": "kim-tolvnow", "empresa": "KIM", "fornecedor": "TOLVNOW", "categoria": "Despesas gerais", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-toquio", "empresa": "KIM", "fornecedor": "TOQUIO", "categoria": "Despesas de marketing", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-uber-do-brasil", "empresa": "KIM", "fornecedor": "UBER DO BRASIL", "categoria": "Despesas de viagens", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "kim-unimed-bh-coop-de-trabalho-medico-lt", "empresa": "KIM", "fornecedor": "UNIMED-BH COOP.DE TRABALHO MEDICO LTDA", "categoria": "Despesas de pessoal", "dia": 15, "lancamentosMes": 1, "ativo": true}, {"id": "kim-zenvia-whatsapp", "empresa": "KIM", "fornecedor": "Zenvia (Whatsapp)", "categoria": "Tecnologia", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-650-industries-expo", "empresa": "TACOM", "fornecedor": "650 INDUSTRIES (EXPO)", "categoria": "Tecnologia", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-asa-driva-tecnologia-l", "empresa": "TACOM", "fornecedor": "ASA*DRIVA TECNOLOGIA L", "categoria": "Despesas de marketing", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-aws", "empresa": "TACOM", "fornecedor": "AWS", "categoria": "Tecnologia", "dia": 1, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-active-campaingn", "empresa": "TACOM", "fornecedor": "Active Campaingn", "categoria": "Despesas de marketing", "dia": 22, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-alpina-capital", "empresa": "TACOM", "fornecedor": "Alpina Capital", "categoria": "Consultorias e assessorias", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-base-2", "empresa": "TACOM", "fornecedor": "BASE 2", "categoria": "Despesas de pessoal", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-claude-ia", "empresa": "TACOM", "fornecedor": "CLAUDE(IA)", "categoria": "Tecnologia", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-cloudflare", "empresa": "TACOM", "fornecedor": "CloudFlare", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-datadog", "empresa": "TACOM", "fornecedor": "DataDOG", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-exact-sales", "empresa": "TACOM", "fornecedor": "Exact Sales", "categoria": "Despesas de marketing", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-figma", "empresa": "TACOM", "fornecedor": "FIGMA", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-folha-encargos", "empresa": "TACOM", "fornecedor": "Folha + Encargos", "categoria": "Despesas de pessoal", "dia": 27, "lancamentosMes": 2, "ativo": true}, {"id": "tacom-jira", "empresa": "TACOM", "fornecedor": "JIRA", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-microsoftbi", "empresa": "TACOM", "fornecedor": "MicrosoftBI", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-movidesk", "empresa": "TACOM", "fornecedor": "Movidesk", "categoria": "Despesas gerais", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-onesignal", "empresa": "TACOM", "fornecedor": "Onesignal", "categoria": "Despesas de marketing", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-rd-station", "empresa": "TACOM", "fornecedor": "RD Station", "categoria": "Despesas de marketing", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-tivit", "empresa": "TACOM", "fornecedor": "TIVIT", "categoria": "Tecnologia", "dia": 27, "lancamentosMes": 1, "ativo": true}];
+const DESPESAS = [{"id": "kim-alloyal", "empresa": "KIM", "fornecedor": "ALLOYAL", "categoria": "Tecnologia", "dia": 21, "lancamentosMes": 1, "ativo": true}, {"id": "kim-azure", "empresa": "KIM", "fornecedor": "AZURE", "categoria": "Tecnologia", "dia": 28, "lancamentosMes": 2, "ativo": true}, {"id": "kim-adjust", "empresa": "KIM", "fornecedor": "Adjust", "categoria": "Despesas de marketing", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-bb-conta-63172-8", "empresa": "KIM", "fornecedor": "BB (Conta 63172-8)", "categoria": "Despesas financeiras", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-cesmor-centro-de-seguranca", "empresa": "KIM", "fornecedor": "CESMOR - CENTRO DE SEGURANÇA", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-colabwork-ltda", "empresa": "KIM", "fornecedor": "COLABWORK LTDA", "categoria": "Consultorias e assessorias", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-contrei", "empresa": "KIM", "fornecedor": "CONTREI", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-drogaria-araujo", "empresa": "KIM", "fornecedor": "Drogaria Araújo", "categoria": "Despesas de pessoal", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-fgts-fundo-garantia-tempo-servico", "empresa": "KIM", "fornecedor": "FGTS - FUNDO GARANTIA TEMPO SERVICO", "categoria": "Despesas de pessoal", "dia": 19, "lancamentosMes": 1, "ativo": true}, {"id": "kim-geosite", "empresa": "KIM", "fornecedor": "Geosite", "categoria": "Tecnologia", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-grupo-zelo", "empresa": "KIM", "fornecedor": "Grupo Zelo", "categoria": "Despesas de marketing", "dia": 15, "lancamentosMes": 1, "ativo": true}, {"id": "kim-igor-tonussi", "empresa": "KIM", "fornecedor": "IGOR TONUSSI", "categoria": "Despesas de pessoal", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-juridico", "empresa": "KIM", "fornecedor": "Juridico", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-mobile-solution", "empresa": "KIM", "fornecedor": "MOBILE SOLUTION", "categoria": "Tecnologia", "dia": 25, "lancamentosMes": 1, "ativo": true}, {"id": "kim-motiva-beneficio", "empresa": "KIM", "fornecedor": "Motiva Beneficio", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "kim-prefeitura-de-belo-horizonte", "empresa": "KIM", "fornecedor": "Prefeitura de Belo Horizonte", "categoria": "Impostos", "dia": 8, "lancamentosMes": 2, "ativo": true}, {"id": "kim-prudentia", "empresa": "KIM", "fornecedor": "Prudentia", "categoria": "Despesas de pessoal", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "kim-sodexo", "empresa": "KIM", "fornecedor": "SODEXO", "categoria": "Despesas de pessoal", "dia": 21, "lancamentosMes": 1, "ativo": true}, {"id": "kim-tim-chips", "empresa": "KIM", "fornecedor": "TIM CHIPS", "categoria": "Despesas gerais", "dia": 2, "lancamentosMes": 5, "ativo": true}, {"id": "kim-tolvnow", "empresa": "KIM", "fornecedor": "TOLVNOW", "categoria": "Despesas gerais", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-toquio", "empresa": "KIM", "fornecedor": "TOQUIO", "categoria": "Despesas de marketing", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "kim-uber-do-brasil", "empresa": "KIM", "fornecedor": "UBER DO BRASIL", "categoria": "Despesas de viagens", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "kim-unimed-bh-coop-de-trabalho-medico-lt", "empresa": "KIM", "fornecedor": "UNIMED-BH COOP.DE TRABALHO MEDICO LTDA", "categoria": "Despesas de pessoal", "dia": 15, "lancamentosMes": 1, "ativo": true}, {"id": "kim-zenvia-whatsapp", "empresa": "KIM", "fornecedor": "Zenvia (Whatsapp)", "categoria": "Tecnologia", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-650-industries-expo", "empresa": "TACOM", "fornecedor": "650 INDUSTRIES (EXPO)", "categoria": "Tecnologia", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-asa-driva-tecnologia-l", "empresa": "TACOM", "fornecedor": "ASA*DRIVA TECNOLOGIA L", "categoria": "Despesas de marketing", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-aws", "empresa": "TACOM", "fornecedor": "AWS", "categoria": "Tecnologia", "dia": 1, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-active-campaingn", "empresa": "TACOM", "fornecedor": "Active Campaingn", "categoria": "Despesas de marketing", "dia": 22, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-alpina-capital", "empresa": "TACOM", "fornecedor": "Alpina Capital", "categoria": "Consultorias e assessorias", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-base-2", "empresa": "TACOM", "fornecedor": "BASE 2", "categoria": "Despesas de pessoal", "dia": 30, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-claude-ia", "empresa": "TACOM", "fornecedor": "CLAUDE(IA)", "categoria": "Tecnologia", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-cloudflare", "empresa": "TACOM", "fornecedor": "CloudFlare", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-datadog", "empresa": "TACOM", "fornecedor": "DataDOG", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-exact-sales", "empresa": "TACOM", "fornecedor": "Exact Sales", "categoria": "Despesas de marketing", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-figma", "empresa": "TACOM", "fornecedor": "FIGMA", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-folha-encargos", "empresa": "TACOM", "fornecedor": "Folha + Encargos", "categoria": "Despesas de pessoal", "dia": 27, "lancamentosMes": 2, "ativo": true}, {"id": "tacom-jira", "empresa": "TACOM", "fornecedor": "JIRA", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-microsoftbi", "empresa": "TACOM", "fornecedor": "MicrosoftBI", "categoria": "Tecnologia", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-movidesk", "empresa": "TACOM", "fornecedor": "Movidesk", "categoria": "Despesas gerais", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-onesignal", "empresa": "TACOM", "fornecedor": "Onesignal", "categoria": "Despesas de marketing", "dia": 6, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-rd-station", "empresa": "TACOM", "fornecedor": "RD Station", "categoria": "Despesas de marketing", "dia": 5, "lancamentosMes": 1, "ativo": true}, {"id": "tacom-tivit", "empresa": "TACOM", "fornecedor": "TIVIT", "categoria": "Tecnologia", "dia": 27, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-linhares-marcas-e-patentes", "empresa": "MOTIVA", "fornecedor": "Linhares marcas e patentes", "categoria": "Despesas gerais", "dia": 7, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-gugs-express", "empresa": "MOTIVA", "fornecedor": "Gugs Express", "categoria": "Despesas de vendas", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-mindwise-action-ltda", "empresa": "MOTIVA", "fornecedor": "MINDWISE ACTION LTDA", "categoria": "Despesas de pessoal", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-transfacil", "empresa": "MOTIVA", "fornecedor": "Transfacil", "categoria": "Despesas de vendas", "dia": 10, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-contest", "empresa": "MOTIVA", "fornecedor": "Contest", "categoria": "Consultorias e assessorias", "dia": 15, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-dedalus", "empresa": "MOTIVA", "fornecedor": "Dedalus", "categoria": "Tecnologia", "dia": 15, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-magna", "empresa": "MOTIVA", "fornecedor": "MAGNA", "categoria": "Despesas gerais", "dia": 15, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-tim", "empresa": "MOTIVA", "fornecedor": "TIM", "categoria": "Despesas gerais", "dia": 15, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-unimed", "empresa": "MOTIVA", "fornecedor": "Unimed", "categoria": "Despesas de pessoal", "dia": 15, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-fgts", "empresa": "MOTIVA", "fornecedor": "FGTS", "categoria": "Despesas de pessoal", "dia": 19, "lancamentosMes": 2, "ativo": true}, {"id": "motiva-colabwork-ltda", "empresa": "MOTIVA", "fornecedor": "COLABWORK LTDA", "categoria": "Consultorias e assessorias", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-cesmor", "empresa": "MOTIVA", "fornecedor": "Cesmor", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-contrei", "empresa": "MOTIVA", "fornecedor": "Contrei", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 2, "ativo": true}, {"id": "motiva-get-demo", "empresa": "MOTIVA", "fornecedor": "Get Demo", "categoria": "Tecnologia", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-inss", "empresa": "MOTIVA", "fornecedor": "INSS", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-lemme", "empresa": "MOTIVA", "fornecedor": "Lemme", "categoria": "Despesas de pessoal", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-santos-e-rigotto", "empresa": "MOTIVA", "fornecedor": "Santos e rigotto", "categoria": "Consultorias e assessorias", "dia": 20, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-agencia-fp-performance", "empresa": "MOTIVA", "fornecedor": "Agencia FP Performance", "categoria": "Despesas de marketing", "dia": 21, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-tw-solutions", "empresa": "MOTIVA", "fornecedor": "TW Solutions", "categoria": "Despesas gerais", "dia": 22, "lancamentosMes": 1, "ativo": true}, {"id": "motiva-expay", "empresa": "MOTIVA", "fornecedor": "EXPAY", "categoria": "Despesas de pessoal", "dia": 24, "lancamentosMes": 2, "ativo": true}, {"id": "motiva-metropolitan-life-seguros-e-previ", "empresa": "MOTIVA", "fornecedor": "METROPOLITAN LIFE SEGUROS E PREVIDENCIA PRIVADA S/A", "categoria": "Despesas de pessoal", "dia": 30, "lancamentosMes": 1, "ativo": true}];
 const CONTAS_CFG = {"url": "https://script.google.com/macros/s/AKfycbwlLzZIRYmpmUZuSB9ZEQMmnqM97WXIE-tzKSpi7XCD8PsNGvw3uYMk4hcdWNrSnc2d/exec", "token": "VTDireto2026"};
 const SENHA_HASH = "4a79339d15e3fd6f4fd7cd0e6468f8e8fe5118ecb7c6a33235bf0c325d4a3d5c";
-const GERADO_EM = "11/11/2026 12:54";
+const GERADO_EM = "11/11/2026 19:31";
 /* CONTAS_DATA_END */
 
 var AUTH_KEY = 'contas_auth';
@@ -220,12 +220,14 @@ function initApp(){
   const br = s => { if (!s) return ''; const p = String(s).slice(0,10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : s; };
   const LS_KEY = 'contas_marcacoes_v1';
   const shared = !!(CONTAS_CFG.url && CONTAS_CFG.token);
+  const ALERTA_DIAS = 10;
+  const EMP_NOME = { KIM: 'KIM', TACOM: 'Tacom', MOTIVA: 'Motiva' };
   const SEM_VALOR = DESPESAS.every(d => d.valor === undefined || d.valor === null);
   if (SEM_VALOR) document.body.classList.add('sem-valor');
 
   let cur = new Date(today.getFullYear(), today.getMonth(), 1);
   let fEmp = '', fSt = '', q = '';
-  let marks = {};   // "AAAA-MM|id" -> {chegou, data_chegada, pago, data_pago, obs, resp, upd}
+  let marks = {};   // "AAAA-MM|id" -> {chegou, data_chegada, obs, resp, upd}
   const mesKey = () => cur.getFullYear() + '-' + String(cur.getMonth()+1).padStart(2,'0');
   const key = id => mesKey() + '|' + id;
 
@@ -268,7 +270,6 @@ function initApp(){
     const on = !c[field];
     const p = { [field]: on };
     if (field === 'chegou') p.data_chegada = on ? iso(today) : '';
-    if (field === 'pago') { p.data_pago = on ? iso(today) : ''; if (on && !c.chegou) { p.chegou = true; p.data_chegada = c.data_chegada || iso(today); } }
     update(id, p);
   }
 
@@ -277,10 +278,9 @@ function initApp(){
     const c = marks[key(d.id)] || {};
     const days = Math.round((dueDate(d.dia) - today) / 864e5);
     const em = n => n === 0 ? 'hoje' : 'em ' + n + 'd';
-    if (c.pago) return { k: 'pagas', cls: 'paid', txt: 'Paga' + (c.data_pago ? ' em ' + br(c.data_pago) : '') };
-    if (c.chegou) return days < 0 ? { k: 'apagar', cls: 'late', txt: 'Chegou · vencida há ' + (-days) + 'd' } : { k: 'apagar', cls: 'arrived', txt: 'Chegou · vence ' + em(days) };
+    if (c.chegou) return { k: 'chegaram', cls: 'paid', txt: 'Chegou' + (c.data_chegada ? ' em ' + br(c.data_chegada) : '') };
     if (days < 0) return { k: 'faltam', cls: 'late', txt: 'Não chegou · venceu há ' + (-days) + 'd', late: true };
-    if (days <= 5) return { k: 'faltam', cls: 'soon', txt: 'Não chegou · vence ' + em(days), soon: true };
+    if (days <= ALERTA_DIAS) return { k: 'faltam', cls: 'soon', txt: 'Cobrar · vence ' + em(days), alerta: true };
     return { k: 'faltam', cls: 'wait', txt: 'Aguardando' };
   }
 
@@ -288,18 +288,20 @@ function initApp(){
     $('mLabel').textContent = MESES[cur.getMonth()] + ' ' + cur.getFullYear();
     const base = DESPESAS.filter(d => !fEmp || d.empresa === fEmp).map(d => [d, statusOf(d)]);
     const sum = a => a.reduce((s, [d]) => s + (Number(d.valor) || 0), 0);
-    const faltam = base.filter(([, s]) => s.k === 'faltam'), apagar = base.filter(([, s]) => s.k === 'apagar'), pagas = base.filter(([, s]) => s.k === 'pagas');
-    const late = faltam.filter(([, s]) => s.late).length, soon = faltam.filter(([, s]) => s.soon).length;
-    $('tTotal').textContent = base.length; $('tTotalV').textContent = SEM_VALOR ? (base.filter(([d]) => d.empresa === 'KIM').length + ' KIM · ' + base.filter(([d]) => d.empresa === 'TACOM').length + ' Tacom') : fmtK(sum(base)) + ' em valor médio';
-    $('tFaltam').textContent = faltam.length; $('tFaltamD').textContent = (late ? late + ' já vencidas' : 'nenhuma vencida') + (soon ? ' · ' + soon + ' vencem em até 5 dias' : '');
+    const faltam = base.filter(([, s]) => s.k === 'faltam'), chegaram = base.filter(([, s]) => s.k === 'chegaram');
+    const late = faltam.filter(([, s]) => s.late).length, alerta = faltam.filter(([, s]) => s.alerta);
+    const porEmp = Object.keys(EMP_NOME).map(e => [e, base.filter(([d]) => d.empresa === e).length]).filter(([, n]) => n).map(([e, n]) => n + ' ' + EMP_NOME[e]).join(' · ');
+    $('tTotal').textContent = base.length; $('tTotalV').textContent = SEM_VALOR ? porEmp : fmtK(sum(base)) + ' em valor médio';
+    $('tFaltam').textContent = faltam.length; $('tFaltamD').textContent = late ? late + ' já vencidas sem chegar' : 'nenhuma vencida sem chegar';
     $('tileFaltam').classList.toggle('bad', late > 0);
-    $('tApagar').textContent = apagar.length; $('tApagarD').textContent = apagar.length ? (SEM_VALOR ? 'aguardando pagamento' : fmtK(sum(apagar)) + ' a sair do caixa') : 'nada pendente';
-    $('tPagas').textContent = pagas.length + ' de ' + base.length; $('tPagasD').textContent = SEM_VALOR ? Math.round(base.length ? pagas.length / base.length * 100 : 0) + '% do mês' : fmtK(sum(pagas)) + ' pagos';
-    $('tBar').style.width = (base.length ? pagas.length / base.length * 100 : 0) + '%';
-    ['tileFaltam','tileApagar','tilePagas'].forEach(i => $(i).classList.toggle('active', $(i).dataset.f === fSt));
+    $('tAlerta').textContent = alerta.length; $('tAlertaD').textContent = alerta.length ? 'cobrar o fornecedor' : 'nada para cobrar agora';
+    $('tileAlerta').classList.toggle('bad', alerta.length > 0);
+    $('tChegaram').textContent = chegaram.length + ' de ' + base.length; $('tChegaramD').textContent = Math.round(base.length ? chegaram.length / base.length * 100 : 0) + '% do mês';
+    $('tBar').style.width = (base.length ? chegaram.length / base.length * 100 : 0) + '%';
+    ['tileFaltam','tileAlerta','tileChegaram'].forEach(i => $(i).classList.toggle('active', $(i).dataset.f === fSt));
 
     const ql = q.trim().toLowerCase();
-    const rows = base.filter(([d, s]) => (!fSt || s.k === fSt) && (!ql || (d.fornecedor + ' ' + (d.categoria || '')).toLowerCase().includes(ql)))
+    const rows = base.filter(([d, s]) => (!fSt || s.k === fSt || (fSt === 'alerta' && s.alerta)) && (!ql || (d.fornecedor + ' ' + (d.categoria || '')).toLowerCase().includes(ql)))
                      .sort((a, b) => a[0].dia - b[0].dia || a[0].fornecedor.localeCompare(b[0].fornecedor));
     const list = $('list');
     list.querySelectorAll('.row:not(.head), .empty').forEach(n => n.remove());
@@ -312,7 +314,7 @@ function initApp(){
       const c = marks[key(d.id)] || {};
       const row = document.createElement('div'); row.className = 'row';
       row.innerHTML = '<div class="day">' + String(due.getDate()).padStart(2,'0') + '<small>' + DOW[due.getDay()] + '</small></div>'
-        + '<div class="who"><span class="name"></span><span class="meta"><span class="tag ' + (d.empresa === 'TACOM' ? 'TACOM' : 'KIM') + '">' + (d.empresa === 'TACOM' ? 'TACOM' : 'KIM') + '</span><span class="cat"></span></span></div>'
+        + '<div class="who"><span class="name"></span><span class="meta"><span class="tag ' + (EMP_NOME[d.empresa] ? d.empresa : 'KIM') + '">' + (EMP_NOME[d.empresa] ? d.empresa : 'KIM') + '</span><span class="cat"></span></span></div>'
         + '<div class="val">' + fmtBRL(d.valor).replace('R$ ', '') + '<small>R$ médio/mês</small></div><div class="checks"></div><div class="status"></div>';
       row.querySelector('.name').textContent = d.fornecedor;
       row.querySelector('.cat').textContent = (d.categoria || '') + (d.lancamentosMes > 1 ? ' · ' + d.lancamentosMes + ' cobranças/mês' : '');
@@ -321,7 +323,7 @@ function initApp(){
         btn.innerHTML = '<span class="box2" aria-hidden="true"></span>'; const t = document.createElement('span'); t.textContent = label + (on && dt ? ' ' + br(dt) : ''); btn.appendChild(t);
         btn.addEventListener('click', () => toggle(d.id, field)); return btn;
       };
-      row.querySelector('.checks').append(mk('arr', 'Chegou', c.chegou, c.data_chegada, 'chegou'), mk('paid', 'Pago', c.pago, c.data_pago, 'pago'));
+      row.querySelector('.checks').append(mk('arr', 'Chegou', c.chegou, c.data_chegada, 'chegou'));
       const st = row.querySelector('.status');
       const pill = document.createElement('span'); pill.className = 'pill ' + s.cls; pill.textContent = s.txt; st.appendChild(pill);
       const obs = document.createElement('input'); obs.className = 'obs'; obs.placeholder = 'Observação do mês'; obs.value = c.obs || ''; obs.setAttribute('aria-label', 'Observação para ' + d.fornecedor);
