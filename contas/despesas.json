@@ -376,5 +376,11 @@
   "empresa": "MOTIVA",
   "fornecedor": "METROPOLITAN LIFE SEGUROS E PREVIDENCIA PRIVADA S/A",
   "dia": 30
+ },
+ {
+  "id": "motiva-janser-priori",
+  "empresa": "MOTIVA",
+  "fornecedor": "Janser Priori",
+  "dia": 10
  }
 ]
